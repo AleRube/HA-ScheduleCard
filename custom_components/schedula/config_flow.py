@@ -17,12 +17,9 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
     TextSelector,
-    TextSelectorConfig,
-    TextSelectorType,
 )
 
 from .const import (
-    CONF_ALARM_CODE,
     CONF_APPLY_ON_START,
     CONF_HVAC_MODE,
     CONF_TARGET,
@@ -52,10 +49,6 @@ def _options_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_APPLY_ON_START, default=defaults.get(CONF_APPLY_ON_START, True)
             ): BooleanSelector(),
-            vol.Optional(
-                CONF_ALARM_CODE,
-                description={"suggested_value": defaults.get(CONF_ALARM_CODE)},
-            ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
         }
     )
 
@@ -74,7 +67,6 @@ class SchedulaConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_TARGET: user_input[CONF_TARGET],
                     CONF_HVAC_MODE: user_input.get(CONF_HVAC_MODE, HVAC_MODE_NONE),
                     CONF_APPLY_ON_START: user_input.get(CONF_APPLY_ON_START, True),
-                    CONF_ALARM_CODE: user_input.get(CONF_ALARM_CODE, ""),
                 },
             )
 
@@ -102,6 +94,5 @@ class SchedulaOptionsFlow(OptionsFlow):
             ),
             CONF_HVAC_MODE: self.config_entry.options.get(CONF_HVAC_MODE, HVAC_MODE_NONE),
             CONF_APPLY_ON_START: self.config_entry.options.get(CONF_APPLY_ON_START, True),
-            CONF_ALARM_CODE: self.config_entry.options.get(CONF_ALARM_CODE, ""),
         }
         return self.async_show_form(step_id="init", data_schema=_options_schema(defaults))

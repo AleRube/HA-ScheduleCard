@@ -18,8 +18,6 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    ALARM_SERVICES,
-    CONF_ALARM_CODE,
     CONF_APPLY_ON_START,
     CONF_HVAC_MODE,
     CONF_TARGET,
@@ -27,7 +25,6 @@ from .const import (
     DOMAIN,
     HVAC_MODE_NONE,
     HVAC_MODES_ALLOWED,
-    LOCK_SERVICES,
     OPTION_DOMAINS,
     PALETTE,
     STORAGE_VERSION,
@@ -96,31 +93,6 @@ def build_default(hass: HomeAssistant, target: str) -> dict[str, Any]:
                 {"start": "00:00", "preset": "basso"},
                 {"start": "07:00", "preset": "alto"},
                 {"start": "22:00", "preset": "basso"},
-            ]
-        )
-    elif domain == "alarm_control_panel":
-        presets = [
-            {"id": "inserito", "name": "Inserito", "icon": "mdi:shield-lock", "color": "#E53935", "value": "armed_away"},
-            {"id": "notte", "name": "Inserito notte", "icon": "mdi:shield-moon", "color": PALETTE[3], "value": "armed_night"},
-            {"id": "disinserito", "name": "Disinserito", "icon": "mdi:shield-off", "color": "#43A047", "value": "disarmed"},
-        ]
-        week = _week(
-            [
-                {"start": "00:00", "preset": "notte"},
-                {"start": "07:00", "preset": "disinserito"},
-                {"start": "23:00", "preset": "notte"},
-            ]
-        )
-    elif domain == "lock":
-        presets = [
-            {"id": "chiusa", "name": "Chiusa", "icon": "mdi:lock", "color": "#E53935", "value": "locked"},
-            {"id": "aperta", "name": "Aperta", "icon": "mdi:lock-open-variant", "color": "#43A047", "value": "unlocked"},
-        ]
-        week = _week(
-            [
-                {"start": "00:00", "preset": "chiusa"},
-                {"start": "08:00", "preset": "aperta"},
-                {"start": "20:00", "preset": "chiusa"},
             ]
         )
     elif vtype == VT_OPTION:
@@ -391,20 +363,6 @@ class ScheduleManager:
                     if domain == "climate" and hvac_mode and hvac_mode != HVAC_MODE_NONE:
                         data["hvac_mode"] = hvac_mode
                     await self._call(domain, "set_temperature", data)
-            elif domain == "alarm_control_panel":
-                service = ALARM_SERVICES.get(str(value))
-                if service is None:
-                    raise HomeAssistantError(f"Stato allarme non valido: {value}")
-                data = {"entity_id": entity_id}
-                code = self.entry.options.get(CONF_ALARM_CODE)
-                if code:
-                    data["code"] = code
-                await self._call(domain, service, data)
-            elif domain == "lock":
-                service = LOCK_SERVICES.get(str(value))
-                if service is None:
-                    raise HomeAssistantError(f"Stato serratura non valido: {value}")
-                await self._call(domain, service, {"entity_id": entity_id})
             elif domain in ("input_number", "number"):
                 await self._call(domain, "set_value", {"entity_id": entity_id, "value": float(value)})
             elif domain == "cover":

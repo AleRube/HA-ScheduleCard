@@ -3,7 +3,7 @@
  * Interfaccia ispirata alle app dei cronotermostati: settimana a barre,
  * giorno con fasce orarie, editor intervallo e editor impostazioni.
  */
-const SCHEDULA_CARD_VERSION = '1.1.1';
+const SCHEDULA_CARD_VERSION = '1.1.2';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
@@ -20,15 +20,8 @@ const ICONS = [
   'mdi:airplane', 'mdi:clock-outline',
 ];
 const NUMBER_DOMAINS = ['climate', 'water_heater', 'input_number', 'number', 'cover'];
-const OPTION_DOMAINS = ['input_select', 'select', 'alarm_control_panel', 'lock'];
-// Opzioni fisse con etichetta per i domini che hanno stati predefiniti
-const FIXED_OPTIONS = {
-  alarm_control_panel: [
-    ['armed_away', 'Inserito totale'], ['armed_home', 'Inserito in casa'], ['armed_night', 'Inserito notte'],
-    ['armed_vacation', 'Inserito vacanza'], ['disarmed', 'Disinserito'],
-  ],
-  lock: [['locked', 'Chiusa'], ['unlocked', 'Aperta']],
-};
+const OPTION_DOMAINS = ['input_select', 'select'];
+const FIXED_OPTIONS = {};
 const HVAC_LABELS = { '': 'Non modificare', heat: 'Caldo', cool: 'Freddo', heat_cool: 'Caldo/Freddo', auto: 'Auto', dry: 'Deumidifica', fan_only: 'Solo ventola', off: 'Spento' };
 const IDLE_DEFAULT = 120; // secondi prima di tornare alla schermata principale
 
@@ -42,7 +35,7 @@ function contrastColor(hex) {
   return L > 0.3 ? '#000' : '#fff';
 }
 const DOMAIN_ICONS = {
-  climate: 'mdi:home-thermometer', alarm_control_panel: 'mdi:shield-home', lock: 'mdi:lock', water_heater: 'mdi:water-boiler', input_number: 'mdi:ray-vertex',
+  climate: 'mdi:home-thermometer', water_heater: 'mdi:water-boiler', input_number: 'mdi:ray-vertex',
   number: 'mdi:numeric', cover: 'mdi:window-shutter', light: 'mdi:lightbulb', switch: 'mdi:toggle-switch',
   fan: 'mdi:fan', input_boolean: 'mdi:toggle-switch-outline', select: 'mdi:format-list-bulleted',
   input_select: 'mdi:format-list-bulleted', automation: 'mdi:robot', script: 'mdi:script-text',
@@ -229,6 +222,7 @@ input[type=time] { font: inherit; font-size: 1.05em; color: var(--sc-fg); backgr
 .modes { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 16px 14px; }
 .modes button { padding: 9px 14px; border-radius: 10px; background: var(--sc-surface); font-size: .95em; }
 .modes button.on { background: var(--sc-accent); color: #fff; }
+.ver { text-align: right; color: var(--sc-muted); font-size: .7em; padding: 0 12px 8px; opacity: .7; }
 .toast { position: absolute; left: 16px; right: 16px; bottom: 16px; background: #323232; color: #fff; padding: 12px 16px; border-radius: 10px;
   font-size: .9em; z-index: 10; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 `;
@@ -925,7 +919,8 @@ class SchedulaCard extends HTMLElement {
     ).join('');
     const err = a.last_error ? `<div class="err">Ultimo errore: ${esc(a.last_error)}</div>` : '';
     return `${this._mainHeader(false)}${status}${err}${rows}
-      <div class="link" data-action="open-presets"><ha-icon icon="${this._isTemp() ? 'mdi:thermometer' : 'mdi:tune-variant'}"></ha-icon><span>${this._settingsLabel('link')}</span></div>`;
+      <div class="link" data-action="open-presets"><ha-icon icon="${this._isTemp() ? 'mdi:thermometer' : 'mdi:tune-variant'}"></ha-icon><span>${this._settingsLabel('link')}</span></div>
+      <div class="ver">Schedula v${SCHEDULA_CARD_VERSION}</div>`;
   }
 
   _viewDay() {

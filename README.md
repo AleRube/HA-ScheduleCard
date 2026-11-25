@@ -4,15 +4,13 @@
 
 ![Anteprima](images/anteprima.png)
 
-Programmatore settimanale **generico** per Home Assistant, con card in stile cronotermostato: riscaldamento, raffrescamento, luci, antintrusione, serrature, tapparelle… Scegli un'entità, crea delle **impostazioni** (es. Comfort 22°, Inserito, Acceso) e assegnale a **fasce orarie** per ogni giorno della settimana.
+Programmatore settimanale **generico** per Home Assistant, con card in stile cronotermostato: riscaldamento, raffrescamento, luci, antintrusione (tramite switch/input_boolean), tapparelle… Scegli un'entità, crea delle **impostazioni** (es. Comfort 22°, Inserito, Acceso) e assegnale a **fasce orarie** per ogni giorno della settimana.
 
 ## Entità supportate
 | Dominio | Cosa imposta l'impostazione |
 |---|---|
 | `climate` | temperatura + modalità per impostazione (Caldo, Freddo, Auto, Spento…) |
 | `water_heater` | temperatura (oppure *Spento*) |
-| `alarm_control_panel` | Inserito totale / in casa / notte / vacanza, Disinserito |
-| `lock` | Chiusa / Aperta |
 | `input_number`, `number` | valore numerico |
 | `cover` | posizione 0–100 % |
 | `input_select`, `select` | opzione |
@@ -47,7 +45,7 @@ La card viene caricata automaticamente dall'integrazione: non serve aggiungere r
 - **Giorno**: elenco delle fasce con inizio e fine. Con **+** aggiungi un orario: l'inizio è proposto dove finisce l'orario precedente all'ultimo, con durata di 1 ora. Tocca una fascia per modificarla o eliminarla. Da qui puoi anche **copiare il giorno** su altri giorni.
 - **Orari collegati**: se cambi l'inizio di un orario, si sposta la fine di quello prima. Se cambi la fine, si sposta l'inizio di quello dopo.
 - **Ora a mano**: tocca le cifre di ore o minuti per scriverle. L'icona dell'orologio apre il selettore.
-- **Impostazioni**: nome, colore, icona e valore. Le icone usano il nero sui colori chiari e il bianco su quelli scuri. Se modifichi un'impostazione, cambia in tutte le fasce che la usano.
+- **Impostazioni**: nome, colore, icona e valore. Tra i simboli ci sono lampadine accese e spente e antintrusione inserito e disinserito. Le icone usano il nero sui colori chiari e il bianco su quelli scuri. Se modifichi un'impostazione, cambia in tutte le fasce che la usano.
 - Dopo **2 minuti** senza modifiche la card torna alla schermata principale. Si può cambiare con `idle_timeout` (secondi, `0` = mai).
 - **Menu ⋮**: attiva/disattiva, applica ora, copia giorno.
 
@@ -60,7 +58,6 @@ All'inizio di ogni fascia viene applicato il valore. Se nel frattempo cambi il t
 ## Opzioni (Configura)
 - Cambio dell'entità da comandare.
 - **Modalità HVAC predefinita**, usata per le impostazioni che hanno "Non modificare".
-- **Codice allarme**: serve solo per gli antintrusione che lo richiedono.
 - Applicazione dell'impostazione all'avvio di Home Assistant.
 
 ## Servizi
