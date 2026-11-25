@@ -17,7 +17,7 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .profiles import build_profile
+from .profiles import CATEGORY_DOMAINS, build_profile
 from .const import (
     CONF_APPLY_ON_START,
     CONF_HVAC_MODE,
@@ -31,6 +31,7 @@ from .const import (
     STORAGE_VERSION,
     VT_NUMBER,
     VT_ONOFF,
+    TARGET_DOMAINS,
     VT_OPTION,
     value_type,
 )
@@ -409,6 +410,31 @@ class ScheduleManager:
     async def async_apply_now(self) -> None:
         await self.async_evaluate(force=True)
 
+    def compatible_domains(self) -> list[str]:
+        """Domini a cui si può passare mantenendo impostazioni e orari (stesso tipo di valore)."""
+        category = self.entry.data.get("category", "altro")
+        domains = CATEGORY_DOMAINS.get(category, TARGET_DOMAINS)
+        vtype = value_type(self.target)
+        return sorted(d for d in domains if value_type(f"{d}.x") == vtype)
+
+    def check_target(self, entity_id: str) -> None:
+        """Solleva errore se la nuova entità non è compatibile."""
+        if "." not in entity_id:
+            raise HomeAssistantError(f"Entità non valida: {entity_id}")
+        if value_type(entity_id) != value_type(self.target):
+            raise HomeAssistantError(
+                "L'entità deve essere dello stesso tipo di quella attuale, altrimenti impostazioni e orari andrebbero persi"
+            )
+        if self.hass.states.get(entity_id) is None:
+            raise HomeAssistantError(f"Entità non trovata: {entity_id}")
+
+    async def async_set_target(self, entity_id: str) -> None:
+        """Cambia l'entità comandata mantenendo impostazioni e orari."""
+        self.check_target(entity_id)
+        self.hass.config_entries.async_update_entry(
+            self.entry, options={**self.entry.options, CONF_TARGET: entity_id}
+        )
+
     def state_attributes(self) -> dict[str, Any]:
         preset = self.current_preset()
         when, nxt = self.next_change()
@@ -418,6 +444,7 @@ class ScheduleManager:
             "target_entity": self.target,
             "value_type": self.data.get("value_type"),
             "category": self.entry.data.get("category", "altro"),
+            "compatible_domains": self.compatible_domains(),
             "current_preset": preset["id"] if preset else None,
             "current_value": preset["value"] if preset else None,
             "next_change": when.isoformat() if when else None,

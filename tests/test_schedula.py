@@ -214,3 +214,42 @@ async def test_profilo_luci(hass: HomeAssistant):
     assert (on["icon"], on["color"], on["value"]) == ("mdi:lightbulb-on", "#FFD166", "on")
     assert (off["icon"], off["color"], off["value"]) == ("mdi:lightbulb-off", "#455A64", "off")
     assert [s["start"] for s in attrs["week"]["sat"]] == ["00:00", "05:30", "07:30", "17:30"]
+
+
+async def test_cambio_entita_mantiene_programma(hass: HomeAssistant):
+    """Cambiando entità dello stesso tipo, impostazioni e orari restano uguali."""
+    hass.states.async_set("light.giardino", "off", {"friendly_name": "Giardino"})
+    hass.states.async_set("switch.faretti", "off", {"friendly_name": "Faretti"})
+    hass.states.async_set("climate.sala", "heat", {"friendly_name": "Sala"})
+    entry = await _create(hass, target="light.giardino", category="luci", name="Luci", subtype="giardino", usage="abitazione")
+    before = hass.states.get("sensor.luci").attributes
+    week = dict(before["week"])
+    week["mon"] = [{"start": "00:00", "preset": "spente"}, {"start": "19:15", "preset": "accese"}]
+    await hass.services.async_call(DOMAIN, "save", {"schedule_id": entry.entry_id, "presets": before["presets"], "week": week}, blocking=True)
+    assert "switch" in before["compatible_domains"] and "climate" not in before["compatible_domains"]
+
+    await hass.services.async_call(DOMAIN, "set_target", {"schedule_id": entry.entry_id, "entity_id": "switch.faretti"}, blocking=True)
+    await hass.async_block_till_done()
+    after = hass.states.get("sensor.luci").attributes
+    assert after["target_entity"] == "switch.faretti"
+    assert after["week"]["mon"] == week["mon"]
+    assert after["presets"] == before["presets"]
+
+    # tipo diverso: rifiutato
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(DOMAIN, "set_target", {"schedule_id": entry.entry_id, "entity_id": "climate.sala"}, blocking=True)
+
+    # opzioni: stesso controllo
+    from homeassistant.data_entry_flow import InvalidData
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with pytest.raises(InvalidData):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {"target_entity": "climate.sala", "hvac_mode": "none", "apply_on_start": True}
+        )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"target_entity": "light.giardino", "hvac_mode": "none", "apply_on_start": True}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.luci").attributes["week"]["mon"] == week["mon"]

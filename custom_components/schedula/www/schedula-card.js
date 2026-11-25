@@ -3,7 +3,7 @@
  * Interfaccia ispirata alle app dei cronotermostati: settimana a barre,
  * giorno con fasce orarie, editor intervallo e editor impostazioni.
  */
-const SCHEDULA_CARD_VERSION = '1.2.0';
+const SCHEDULA_CARD_VERSION = '1.3.0';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
@@ -24,6 +24,12 @@ const NUMBER_DOMAINS = ['climate', 'water_heater', 'input_number', 'number', 'co
 const OPTION_DOMAINS = ['input_select', 'select'];
 const FIXED_OPTIONS = {};
 const HVAC_LABELS = { '': 'Non modificare', heat: 'Caldo', cool: 'Freddo', heat_cool: 'Caldo/Freddo', auto: 'Auto', dry: 'Deumidifica', fan_only: 'Solo ventola', off: 'Spento' };
+const CATEGORY_INFO = {
+  hvac: ['HVAC', 'mdi:thermostat'], luci: ['Luci', 'mdi:lightbulb-group'], tvcc: ['TVCC', 'mdi:cctv'],
+  antintrusione: ['Antintrusione', 'mdi:shield-home'], tapparelle: ['Tapparelle', 'mdi:window-shutter'],
+  irrigazione: ['Irrigazione', 'mdi:sprinkler-variant'], ventilazione: ['Ventilazione', 'mdi:fan'],
+  acs: ['Acqua calda sanitaria', 'mdi:water-boiler'], altro: ['Altro', 'mdi:calendar-clock'],
+};
 const IDLE_DEFAULT = 120; // secondi prima di tornare alla schermata principale
 
 // Testo nero su colori chiari, bianco su colori scuri (alto contrasto)
@@ -51,6 +57,10 @@ const toMin = (s) => {
 const toHHMM = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const clone = (o) => JSON.parse(JSON.stringify(o));
+const allSchedules = (hass) =>
+  Object.keys(hass.states)
+    .filter((e) => e.startsWith('sensor.') && isSchedula(hass.states[e]))
+    .sort((a, b) => String(hass.states[a].attributes.friendly_name || a).localeCompare(String(hass.states[b].attributes.friendly_name || b)));
 const isSchedula = (st) => !!(st && st.attributes && st.attributes.schedule_id && st.attributes.week && st.attributes.presets);
 const decimals = (step) => {
   const s = String(step);
@@ -224,6 +234,24 @@ input[type=time] { font: inherit; font-size: 1.05em; color: var(--sc-fg); backgr
 .modes button { padding: 9px 14px; border-radius: 10px; background: var(--sc-surface); font-size: .95em; }
 .modes button.on { background: var(--sc-accent); color: #fff; }
 .ver { text-align: right; color: var(--sc-muted); font-size: .7em; padding: 0 12px 8px; opacity: .7; }
+.srow { display: flex; align-items: center; gap: 14px; padding: 14px 12px 14px 16px; border-bottom: 1px solid var(--sc-div); cursor: pointer; }
+.srow:hover { background: rgba(127,127,127,.05); }
+.srow.off .circle, .srow.off .bar { opacity: .4; }
+.srow-main { flex: 1; min-width: 0; }
+.srow-name { font-size: 1.15em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.srow-sub { color: var(--sc-muted); font-size: .9em; margin-top: 2px; }
+.srow-sub b { color: var(--sc-fg); font-weight: 600; }
+.srow-tgt { color: var(--sc-muted); font-size: .8em; margin-top: 2px; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.srow-tgt ha-icon { --mdc-icon-size: 15px; flex: none; }
+.srow .bar { height: 8px; margin-top: 9px; border-radius: 4px; }
+.srow .chev-r { color: var(--sc-muted); flex: none; margin-left: -6px; }
+.tgl { width: 46px; height: 28px; border-radius: 14px; background: var(--sc-surface); position: relative; flex: none; }
+.tgl span { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #9aa0aa; transition: left .15s; }
+.tgl.on { background: var(--sc-accent); }
+.tgl.on span { left: 21px; background: #fff; }
+.search { display: flex; align-items: center; gap: 8px; margin: 10px 16px; padding: 8px 12px; background: var(--sc-surface); border-radius: 10px; }
+.search input { flex: 1; font: inherit; color: var(--sc-fg); background: transparent; border: 0; outline: none; }
+.trow ha-icon.ti { color: var(--sc-muted); flex: none; }
 .toast { position: absolute; left: 16px; right: 16px; bottom: 16px; background: #323232; color: #fff; padding: 12px 16px; border-radius: 10px;
   font-size: .9em; z-index: 10; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 `;
@@ -255,14 +283,33 @@ class SchedulaCard extends HTMLElement {
     );
   }
 
-  static getStubConfig(hass) {
-    const id = Object.keys(hass.states).find((e) => e.startsWith('sensor.') && isSchedula(hass.states[e]));
-    return id ? { entity: id } : {};
+  static getStubConfig() {
+    return {};
+  }
+
+  static getConfigElement() {
+    return document.createElement('schedula-card-editor');
   }
 
   setConfig(config) {
     this._config = config || {};
     this._sel = this._config.entity || null;
+    this._view = this._home();
+    this._stack = [];
+    this._sig = null;
+    if (this._hass) {
+      this._loadDraft();
+      this._render();
+    }
+  }
+
+  // Con "entity" la card apre direttamente la settimana; altrimenti mostra l'elenco
+  _listMode() {
+    return !this._config?.entity;
+  }
+
+  _home() {
+    return this._listMode() ? 'list' : 'week';
   }
 
   getCardSize() {
@@ -271,7 +318,7 @@ class SchedulaCard extends HTMLElement {
 
   connectedCallback() {
     this._timer = setInterval(() => {
-      if (this._hass && ['week', 'day'].includes(this._view) && !this._menu) this._render();
+      if (this._hass && ['list', 'week', 'day'].includes(this._view) && !this._menu) this._render();
     }, 60000);
     // Dopo N secondi senza modifiche torna alla schermata principale della card
     this._idleTimer = setInterval(() => this._checkIdle(), 5000);
@@ -280,9 +327,9 @@ class SchedulaCard extends HTMLElement {
   _checkIdle() {
     const idle = Number(this._config?.idle_timeout ?? IDLE_DEFAULT);
     if (!this._hass || !idle || idle <= 0) return;
-    if (this._view === 'week' && !this._menu) return;
+    if (this._view === this._home() && !this._menu) return;
     if (Date.now() - this._lastActivity < idle * 1000) return;
-    this._view = 'week';
+    this._view = this._home();
     this._stack = [];
     this._menu = null;
     this._interval = null;
@@ -298,16 +345,19 @@ class SchedulaCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    if (!this._listMode()) this._sel = this._config.entity;
     const list = this._schedules();
-    if (!this._sel || !hass.states[this._sel]) this._sel = list[0] || null;
-    const st = this._sel ? hass.states[this._sel] : null;
-    const tgt = st ? hass.states[st.attributes.target_entity] : null;
-    const sig = st
-      ? JSON.stringify([st.state, st.attributes, list, tgt ? [tgt.attributes.friendly_name, tgt.attributes.min_temp, tgt.attributes.max_temp, tgt.attributes.min, tgt.attributes.max, tgt.attributes.options] : null])
-      : 'none:' + list.join(',');
+    const ids = this._view === 'list' ? list : this._sel ? [this._sel] : [];
+    const parts = ids.map((id) => {
+      const st = hass.states[id];
+      const tgt = st ? hass.states[st.attributes.target_entity] : null;
+      const ta = tgt ? tgt.attributes : {};
+      return [id, st ? st.state : null, st ? st.attributes : null, tgt ? [ta.friendly_name, ta.icon, ta.min_temp, ta.max_temp, ta.min, ta.max, ta.options] : null];
+    });
+    const sig = JSON.stringify([this._view === 'list', list, parts]);
     if (sig === this._sig && this._rendered) return;
     this._sig = sig;
-    if (!this._rendered || ['week', 'day'].includes(this._view)) {
+    if (!this._rendered || ['list', 'week', 'day'].includes(this._view)) {
       this._loadDraft();
       this._render();
     }
@@ -319,7 +369,23 @@ class SchedulaCard extends HTMLElement {
     if (Array.isArray(this._config.entities) && this._config.entities.length) {
       return this._config.entities.filter((e) => isSchedula(this._hass.states[e]));
     }
-    return Object.keys(this._hass.states).filter((e) => e.startsWith('sensor.') && isSchedula(this._hass.states[e])).sort();
+    const all = allSchedules(this._hass);
+    const cat = this._config.category;
+    return cat ? all.filter((e) => (this._hass.states[e].attributes.category || 'altro') === cat) : all;
+  }
+
+  // Esegue fn come se fosse selezionata la schedulazione id (per l'elenco)
+  _withSel(id, fn) {
+    const prevSel = this._sel;
+    const prevDraft = this._draft;
+    this._sel = id;
+    this._loadDraft();
+    try {
+      return fn();
+    } finally {
+      this._sel = prevSel;
+      this._draft = prevDraft;
+    }
   }
 
   _st() {
@@ -392,6 +458,12 @@ class SchedulaCard extends HTMLElement {
     const base = this._fmt(p.value);
     if (this._domain() === 'climate' && p.hvac_mode && String(p.value).toLowerCase() !== 'off') return `${base} · ${HVAC_LABELS[p.hvac_mode] || p.hvac_mode}`;
     return base;
+  }
+
+  // Valore da mostrare accanto al nome: per acceso/spento il nome basta
+  _fmtShort(p) {
+    if (!p || this._vt() === 'onoff') return '';
+    return this._fmtP(p);
   }
 
   _fixedOptions() {
@@ -467,7 +539,7 @@ class SchedulaCard extends HTMLElement {
   }
 
   _pop() {
-    this._view = this._stack.pop() || 'week';
+    this._view = this._stack.pop() || this._home();
     this._menu = null;
     this._render();
   }
@@ -486,7 +558,7 @@ class SchedulaCard extends HTMLElement {
   _onClick(e) {
     const el = e.target.closest('[data-action]');
     const action = el?.dataset.action;
-    if (this._menu && !e.target.closest('.menu') && action !== 'menu' && action !== 'title-menu') {
+    if (this._menu && !e.target.closest('.menu') && action !== 'menu') {
       this._menu = null;
       this._render();
       return;
@@ -504,20 +576,38 @@ class SchedulaCard extends HTMLElement {
         this._menu = this._menu === 'main' ? null : 'main';
         this._render();
         break;
-      case 'title-menu':
-        if (this._schedules().length > 1) {
-          this._menu = this._menu === 'schedules' ? null : 'schedules';
-          this._render();
-        }
-        break;
-      case 'select-schedule':
+      case 'open-schedule':
         this._sel = ds.entity;
-        this._view = 'week';
-        this._stack = [];
-        this._menu = null;
         this._loadDraft();
-        this._render();
+        this._push('week');
         break;
+      case 'row-toggle': {
+        const st = this._hass.states[ds.entity];
+        if (!st) break;
+        this._hass
+          .callService('schedula', 'set_enabled', { schedule_id: st.attributes.schedule_id, enabled: !st.attributes.enabled })
+          .catch((err) => this._toast('Errore: ' + (err?.message || err)));
+        break;
+      }
+      case 'change-target':
+        this._menu = null;
+        this._push('target');
+        break;
+      case 'pick-target': {
+        const a = this._attr();
+        if (ds.entity === a.target_entity) {
+          this._pop();
+          break;
+        }
+        const name = this._hass.states[ds.entity]?.attributes?.friendly_name || ds.entity;
+        if (!confirm(`Comandare "${name}" al posto di "${this._targetName()}"?\nImpostazioni e orari restano uguali.`)) break;
+        this._hass
+          .callService('schedula', 'set_target', { schedule_id: a.schedule_id, entity_id: ds.entity })
+          .then(() => this._toast(`Ora comanda: ${name}`))
+          .catch((err) => this._toast('Errore: ' + (err?.message || err)));
+        this._pop();
+        break;
+      }
       case 'toggle-enabled':
         this._menu = null;
         this._call('set_enabled', { enabled: !this._attr().enabled });
@@ -694,6 +784,13 @@ class SchedulaCard extends HTMLElement {
       this._onTimeInput(e, tm[1], tm[2]);
       return;
     }
+    if (f === 'target-search') {
+      const q = v.trim().toLowerCase();
+      this.shadowRoot.querySelectorAll('.trow').forEach((r) => {
+        r.style.display = !q || r.dataset.search.includes(q) ? '' : 'none';
+      });
+      return;
+    }
     if (f === 'preset-name') this._presetEdit.name = v;
     else if (f === 'preset-slider') {
       const n = this._snap(Number(v));
@@ -837,11 +934,11 @@ class SchedulaCard extends HTMLElement {
     return `<span class="circle" style="background:${esc(bg)};color:${contrastColor(bg)};${s}"><ha-icon icon="${esc(p?.icon || 'mdi:help')}"></ha-icon></span>`;
   }
 
-  _header({ title, sub, subOff, back, trash, menu, titleMenu }) {
-    const many = titleMenu && this._schedules().length > 1;
+  _header({ title, sub, subOff, back, trash, menu, icon }) {
+    const many = false; // eslint-disable-line no-unused-vars
     let html = `<div class="hdr">
-      ${back ? `<button class="icon-btn" data-action="back" aria-label="Indietro"><ha-icon icon="mdi:arrow-left"></ha-icon></button>` : `<div class="hdr-icon"><ha-icon icon="${esc(this._st()?.attributes?.icon || 'mdi:calendar-clock')}"></ha-icon></div>`}
-      <div class="hdr-t ${many ? 'clickable' : ''}" ${many ? 'data-action="title-menu"' : ''}>
+      ${back ? `<button class="icon-btn" data-action="back" aria-label="Indietro"><ha-icon icon="mdi:arrow-left"></ha-icon></button>` : `<div class="hdr-icon"><ha-icon icon="${esc(icon || this._st()?.attributes?.icon || 'mdi:calendar-clock')}"></ha-icon></div>`}
+      <div class="hdr-t">
         <div class="title"><span style="overflow:hidden;text-overflow:ellipsis">${esc(title)}</span>${many ? '<ha-icon class="chev" icon="mdi:chevron-down"></ha-icon>' : ''}</div>
         ${sub ? `<div class="sub ${subOff ? 'off' : ''}">${sub}</div>` : ''}
       </div>
@@ -853,18 +950,10 @@ class SchedulaCard extends HTMLElement {
       html += `<div class="menu">
         <div class="mi" data-action="toggle-enabled"><ha-icon icon="${a.enabled ? 'mdi:pause-circle-outline' : 'mdi:play-circle-outline'}"></ha-icon>${a.enabled ? 'Disattiva' : 'Attiva'} schedulazione</div>
         <div class="mi" data-action="apply-now"><ha-icon icon="mdi:sync"></ha-icon>Applica ora</div>
+        <div class="mi" data-action="change-target"><ha-icon icon="mdi:swap-horizontal"></ha-icon>Cambia entità comandata</div>
         ${this._view === 'day' ? `<div class="mi" data-action="copy-day"><ha-icon icon="mdi:content-copy"></ha-icon>Copia ${DAY_LONG[this._day]} su…</div>` : ''}
         <div class="mi" data-action="open-presets"><ha-icon icon="mdi:tune-variant"></ha-icon>${this._settingsLabel('link')}</div>
       </div>`;
-    }
-    if (this._menu === 'schedules') {
-      html += `<div class="menu left">${this._schedules()
-        .map((id) => {
-          const st = this._hass.states[id];
-          const sel = id === this._sel;
-          return `<div class="mi ${sel ? 'sel' : ''}" data-action="select-schedule" data-entity="${esc(id)}"><ha-icon icon="${sel ? 'mdi:check' : 'mdi:calendar-clock'}"></ha-icon>${esc(st.attributes.friendly_name || id)}</div>`;
-        })
-        .join('')}</div>`;
     }
     return html;
   }
@@ -873,12 +962,11 @@ class SchedulaCard extends HTMLElement {
     const a = this._attr();
     const st = this._st();
     return this._header({
-      title: this._config.title || st?.attributes?.friendly_name || 'Schedulazione',
+      title: (this._listMode() ? null : this._config.title) || st?.attributes?.friendly_name || 'Schedulazione',
       sub: a.enabled ? 'Attiva' : 'Disattivata',
       subOff: !a.enabled,
       back,
       menu: true,
-      titleMenu: true,
     });
   }
 
@@ -910,7 +998,7 @@ class SchedulaCard extends HTMLElement {
       nextTxt = ` · poi <span class="dot" style="background:${esc(nxt.color)}"></span> <b>${esc(nxt.name)}</b> ${dd === today ? 'alle' : DAY_SHORT[dd].toLowerCase() + ' alle'} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
     }
     const status = cur
-      ? `<div class="status">Ora: <span class="dot" style="background:${esc(cur.color)}"></span><b>${esc(cur.name)}</b> ${esc(this._fmtP(cur))}${nextTxt}</div>`
+      ? `<div class="status">Ora: <span class="dot" style="background:${esc(cur.color)}"></span><b>${esc(cur.name)}</b> ${esc(this._fmtShort(cur))}${nextTxt}</div>`
       : '';
     const rows = DAYS.map(
       (k, i) => `<div class="day-row" data-action="open-day" data-day="${i}">
@@ -919,9 +1007,76 @@ class SchedulaCard extends HTMLElement {
       </div>`
     ).join('');
     const err = a.last_error ? `<div class="err">Ultimo errore: ${esc(a.last_error)}</div>` : '';
-    return `${this._mainHeader(false)}${status}${err}${rows}
+    return `${this._mainHeader(this._listMode())}${status}${err}${rows}
       <div class="link" data-action="open-presets"><ha-icon icon="${this._isTemp() ? 'mdi:thermometer' : 'mdi:tune-variant'}"></ha-icon><span>${this._settingsLabel('link')}</span></div>
       <div class="ver">Schedula v${SCHEDULA_CARD_VERSION}</div>`;
+  }
+
+  _nextTxt(a) {
+    if (!a.next_change) return '';
+    const dt = new Date(a.next_change);
+    const today = (new Date().getDay() + 6) % 7;
+    const dd = (dt.getDay() + 6) % 7;
+    return ` · fino ${dd === today ? 'alle' : DAY_SHORT[dd].toLowerCase() + ' alle'} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  }
+
+  _viewList() {
+    const ids = this._schedules();
+    const cat = this._config.category;
+    const title = this._config.title || (cat && CATEGORY_INFO[cat] ? CATEGORY_INFO[cat][0] : 'Schedulazioni');
+    const icon = cat && CATEGORY_INFO[cat] ? CATEGORY_INFO[cat][1] : 'mdi:calendar-clock';
+    const today = (new Date().getDay() + 6) % 7;
+    const rows = ids
+      .map((id) =>
+        this._withSel(id, () => {
+          const a = this._attr();
+          const cur = this._preset(a.current_preset);
+          const sub = a.enabled
+            ? `<b>${esc(cur?.name || '—')}</b> ${esc(this._fmtShort(cur))}${esc(this._nextTxt(a))}`
+            : 'Disattivata';
+          return `<div class="srow ${a.enabled ? '' : 'off'}" data-action="open-schedule" data-entity="${esc(id)}">
+            ${this._circle(cur || { icon: a.icon, color: '#9E9E9E' }, 46)}
+            <div class="srow-main">
+              <div class="srow-name">${esc(a.friendly_name || id)}</div>
+              <div class="srow-sub">${sub}</div>
+              <div class="srow-tgt"><ha-icon icon="${esc(this._targetIcon())}"></ha-icon>${esc(this._targetName())}</div>
+              ${this._draft ? this._bar(today) : ''}
+            </div>
+            <button class="tgl ${a.enabled ? 'on' : ''}" data-action="row-toggle" data-entity="${esc(id)}" aria-label="Attiva o disattiva"><span></span></button>
+            <ha-icon class="chev-r" icon="mdi:chevron-right"></ha-icon>
+          </div>`;
+        })
+      )
+      .join('');
+    const empty = `<div class="empty">Nessuna schedulazione da mostrare.<br>Modifica la card (matita → Modifica) per scegliere quali schedulazioni vedere qui, oppure aggiungine una da Impostazioni → Dispositivi e servizi → Schedula.</div>`;
+    return `${this._header({ title, icon, sub: `${ids.length} schedulazion${ids.length === 1 ? 'e' : 'i'}` })}
+      ${rows || empty}
+      <div class="ver">Schedula v${SCHEDULA_CARD_VERSION}</div>`;
+  }
+
+  _viewTarget() {
+    const a = this._attr();
+    const doms = a.compatible_domains || [this._domain()];
+    const ents = Object.keys(this._hass.states)
+      .filter((e) => doms.includes(e.split('.')[0]))
+      .sort((x, y) => String(this._hass.states[x].attributes.friendly_name || x).localeCompare(String(this._hass.states[y].attributes.friendly_name || y)));
+    const rows = ents
+      .map((e) => {
+        const st = this._hass.states[e];
+        const name = st.attributes.friendly_name || e;
+        const sel = e === a.target_entity;
+        const icon = st.attributes.icon || DOMAIN_ICONS[e.split('.')[0]] || 'mdi:devices';
+        return `<div class="opt-row trow" data-action="pick-target" data-entity="${esc(e)}" data-search="${esc((name + ' ' + e).toLowerCase())}">
+          <span class="radio ${sel ? 'on' : ''}">${sel ? '<ha-icon icon="mdi:check-bold"></ha-icon>' : ''}</span>
+          <ha-icon class="ti" icon="${esc(icon)}"></ha-icon>
+          <span class="opt-name">${esc(name)}<small>${esc(e)}</small></span>
+        </div>`;
+      })
+      .join('');
+    return `${this._header({ title: 'Cambia entità comandata', back: true })}
+      <div class="note">Puoi scegliere solo entità dello stesso tipo: impostazioni e orari restano uguali.</div>
+      <div class="search"><ha-icon icon="mdi:magnify"></ha-icon><input type="search" data-field="target-search" placeholder="Cerca…"></div>
+      ${rows || '<div class="empty">Nessuna entità compatibile trovata.</div>'}`;
   }
 
   _viewDay() {
@@ -941,7 +1096,7 @@ class SchedulaCard extends HTMLElement {
           <div class="vsep"></div>
           <div class="slot-main">
             <div class="slot-top">${this._circle(p)}<span class="pname">${esc(p?.name || s.preset)}</span>${active ? '<span class="badge">IN CORSO</span>' : ''}</div>
-            <div class="slot-bottom"><span class="tname">${esc(this._targetName())}</span><span class="pval">${esc(this._fmtP(p))}</span></div>
+            <div class="slot-bottom"><span class="tname">${esc(this._targetName())}</span><span class="pval">${esc(this._fmtShort(p))}</span></div>
           </div>
         </div>`;
       })
@@ -1078,8 +1233,12 @@ class SchedulaCard extends HTMLElement {
     if (!this._hass) return;
     this._rendered = true;
     let body;
-    if (!this._sel || !this._draft) {
-      body = `${this._header({ title: this._config.title || 'Schedula' })}<div class="empty">Nessuna schedulazione trovata.<br>Aggiungi l'integrazione <b>Schedula</b> da Impostazioni → Dispositivi e servizi, poi torna qui.</div>`;
+    if (this._view === 'list') {
+      body = this._viewList();
+    } else if (!this._sel || !this._draft) {
+      body = this._listMode() || this._hass.states[this._sel]
+        ? `${this._header({ title: 'Schedula', back: this._listMode() })}<div class="empty">Caricamento…</div>`
+        : `${this._header({ title: this._config.title || 'Schedula' })}<div class="empty">Schedulazione non trovata: ${esc(this._config.entity)}.<br>Modifica la card per sceglierne un'altra.</div>`;
     } else {
       switch (this._view) {
         case 'day':
@@ -1097,8 +1256,10 @@ class SchedulaCard extends HTMLElement {
         case 'copy':
           body = this._viewCopy();
           break;
+        case 'target':
+          body = this._viewTarget();
+          break;
         default:
-          this._view = 'week';
           body = this._viewWeek();
       }
     }
@@ -1106,14 +1267,119 @@ class SchedulaCard extends HTMLElement {
   }
 }
 
+
+// ---------------------------------------------------------------- editor visuale
+class SchedulaCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.addEventListener('change', (e) => this._onChange(e));
+  }
+
+  setConfig(config) {
+    this._config = { ...(config || {}) };
+    this._render();
+  }
+
+  set hass(hass) {
+    const first = !this._hass;
+    this._hass = hass;
+    if (first) this._render();
+  }
+
+  _cat(id) {
+    return this._hass.states[id]?.attributes?.category || 'altro';
+  }
+
+  _fire() {
+    this.dispatchEvent(new CustomEvent('config-changed', { detail: { config: this._config }, bubbles: true, composed: true }));
+  }
+
+  _onChange(e) {
+    const t = e.target;
+    const c = { ...this._config };
+    const k = t.dataset.k;
+    let selected = c.entity ? [c.entity] : [...(c.entities || [])];
+    let direct = !!c.entity;
+    if (k === 'title') {
+      if (t.value.trim()) c.title = t.value.trim();
+      else delete c.title;
+    } else if (k === 'category') {
+      if (t.value) {
+        c.category = t.value;
+        selected = selected.filter((id) => this._cat(id) === t.value);
+      } else delete c.category;
+    } else if (k === 'idle') {
+      const n = parseInt(t.value, 10);
+      if (Number.isNaN(n) || n === 120) delete c.idle_timeout;
+      else c.idle_timeout = Math.max(0, n);
+    } else if (k === 'sched') {
+      const id = t.dataset.id;
+      selected = t.checked ? [...selected.filter((x) => x !== id), id] : selected.filter((x) => x !== id);
+    } else if (k === 'direct') {
+      direct = t.checked;
+    } else return;
+    delete c.entity;
+    delete c.entities;
+    if (direct && selected.length) c.entity = selected[selected.length - 1];
+    else if (selected.length) c.entities = selected;
+    this._config = c;
+    this._fire();
+    this._render();
+  }
+
+  _render() {
+    if (!this._hass || !this._config) return;
+    const c = this._config;
+    const selected = c.entity ? [c.entity] : c.entities || [];
+    const cat = c.category || '';
+    const list = allSchedules(this._hass).filter((id) => !cat || this._cat(id) === cat);
+    const cats = Object.entries(CATEGORY_INFO)
+      .map(([k, [label]]) => `<option value="${k}" ${k === cat ? 'selected' : ''}>${esc(label)}</option>`)
+      .join('');
+    const rows = list
+      .map((id) => {
+        const a = this._hass.states[id].attributes;
+        const info = CATEGORY_INFO[this._cat(id)] || CATEGORY_INFO.altro;
+        return `<label class="r"><input type="checkbox" data-k="sched" data-id="${esc(id)}" ${selected.includes(id) ? 'checked' : ''}>
+          <ha-icon icon="${esc(a.icon || info[1])}"></ha-icon><span>${esc(a.friendly_name || id)}<small>${esc(info[0])} · ${esc(id)}</small></span></label>`;
+      })
+      .join('');
+    this.shadowRoot.innerHTML = `<style>
+      :host { display: block; }
+      .f { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+      .f > span { font-weight: 500; }
+      input[type=text], input[type=number], select { font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--divider-color, #ccc);
+        background: var(--card-background-color, #fff); color: var(--primary-text-color); }
+      .hint { color: var(--secondary-text-color); font-size: .85em; margin: 2px 0 8px; }
+      .r { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--divider-color, #eee); cursor: pointer; }
+      .r span { display: flex; flex-direction: column; }
+      .r small { color: var(--secondary-text-color); }
+      .r ha-icon { color: var(--secondary-text-color); }
+      .chk { display: flex; gap: 10px; align-items: center; margin: 12px 0; }
+    </style>
+    <label class="f"><span>Titolo</span><input type="text" data-k="title" value="${esc(c.title || '')}" placeholder="Es. Riscaldamento"></label>
+    <label class="f"><span>Tipo di impianto</span><select data-k="category"><option value="">Tutti i tipi</option>${cats}</select></label>
+    <div class="f"><span>Schedulazioni da mostrare</span>
+      <div class="hint">Se non ne selezioni nessuna, la card mostra tutte quelle del tipo scelto, anche quelle che creerai in futuro.</div>
+      ${rows || '<div class="hint">Nessuna schedulazione trovata. Aggiungila da Impostazioni → Dispositivi e servizi → Schedula.</div>'}
+    </div>
+    <label class="chk"><input type="checkbox" data-k="direct" ${c.entity ? 'checked' : ''}>Apri direttamente la settimana (una sola schedulazione, senza elenco)</label>
+    <label class="f"><span>Ritorno alla schermata principale dopo (secondi, 0 = mai)</span><input type="number" min="0" data-k="idle" value="${esc(c.idle_timeout ?? 120)}"></label>`;
+  }
+}
+
+if (!customElements.get('schedula-card-editor')) customElements.define('schedula-card-editor', SchedulaCardEditor);
+
 if (!customElements.get('schedula-card')) {
   customElements.define('schedula-card', SchedulaCard);
   window.customCards = window.customCards || [];
   window.customCards.push({
     type: 'schedula-card',
     name: 'Schedula',
-    description: 'Programmatore settimanale con fasce orarie e impostazioni (stile cronotermostato).',
+    description: 'Elenco delle tue schedulazioni settimanali (riscaldamento, luci, ecc.) con fasce orarie stile cronotermostato.',
     preview: false,
+    documentationURL: 'https://github.com/AleRube/HA-ScheduleCard',
   });
   console.info(`%c SCHEDULA-CARD %c v${SCHEDULA_CARD_VERSION} `, 'background:#4F87FF;color:#fff;border-radius:3px 0 0 3px', 'background:#222;color:#fff;border-radius:0 3px 3px 0');
 }

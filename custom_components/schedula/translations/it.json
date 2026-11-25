@@ -30,8 +30,12 @@
           "target_entity": "Entità da comandare",
           "hvac_mode": "Modalità HVAC predefinita (solo termostati)",
           "apply_on_start": "Applica subito all'avvio di Home Assistant"
-        }
+        },
+        "description": "Puoi cambiare l'entità comandata: impostazioni e orari restano uguali se la nuova entità è dello stesso tipo."
       }
+    },
+    "error": {
+      "different_type": "L'entità deve essere dello stesso tipo di quella attuale (es. termostato con termostato, luce/switch con luce/switch), altrimenti impostazioni e orari andrebbero persi."
     }
   },
   "selector": {
@@ -156,6 +160,20 @@
         "schedule_id": {
           "name": "ID schedulazione",
           "description": "Attributo schedule_id del sensore."
+        }
+      }
+    },
+    "set_target": {
+      "name": "Cambia entità",
+      "description": "Cambia l'entità comandata mantenendo impostazioni e orari (stesso tipo).",
+      "fields": {
+        "schedule_id": {
+          "name": "ID schedulazione",
+          "description": "Attributo schedule_id del sensore."
+        },
+        "entity_id": {
+          "name": "Nuova entità",
+          "description": "Entità dello stesso tipo."
         }
       }
     }

@@ -24,6 +24,7 @@ from .const import (
     SERVICE_APPLY_NOW,
     SERVICE_SAVE,
     SERVICE_SET_ENABLED,
+    SERVICE_SET_TARGET,
     VERSION,
 )
 from .manager import ScheduleManager
@@ -43,6 +44,9 @@ SET_ENABLED_SCHEMA = vol.Schema(
     {vol.Required(ATTR_SCHEDULE_ID): cv.string, vol.Required(ATTR_ENABLED): cv.boolean}
 )
 APPLY_SCHEMA = vol.Schema({vol.Required(ATTR_SCHEDULE_ID): cv.string})
+SET_TARGET_SCHEMA = vol.Schema(
+    {vol.Required(ATTR_SCHEDULE_ID): cv.string, vol.Required("entity_id"): cv.entity_id}
+)
 
 
 def _manager(hass: HomeAssistant, schedule_id: str) -> ScheduleManager:
@@ -85,6 +89,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         manager = _manager(hass, call.data[ATTR_SCHEDULE_ID])
         await manager.async_apply_now()
 
+    async def handle_set_target(call: ServiceCall) -> None:
+        manager = _manager(hass, call.data[ATTR_SCHEDULE_ID])
+        await manager.async_set_target(call.data["entity_id"])
+
+    hass.services.async_register(DOMAIN, SERVICE_SET_TARGET, handle_set_target, schema=SET_TARGET_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SAVE, handle_save, schema=SAVE_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_ENABLED, handle_set_enabled, schema=SET_ENABLED_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_APPLY_NOW, handle_apply, schema=APPLY_SCHEMA)

@@ -28,3 +28,13 @@ apply_now:
       required: true
       selector:
         text:
+set_target:
+  fields:
+    schedule_id:
+      required: true
+      selector:
+        text:
+    entity_id:
+      required: true
+      selector:
+        entity:

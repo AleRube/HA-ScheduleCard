@@ -30,8 +30,12 @@
           "target_entity": "Entity to control",
           "hvac_mode": "Default HVAC mode (thermostats only)",
           "apply_on_start": "Apply immediately when Home Assistant starts"
-        }
+        },
+        "description": "You can change the controlled entity: presets and times are kept if the new entity is of the same kind."
       }
+    },
+    "error": {
+      "different_type": "The entity must be of the same kind as the current one, otherwise presets and times would be lost."
     }
   },
   "selector": {
@@ -156,6 +160,20 @@
         "schedule_id": {
           "name": "Schedule ID",
           "description": "schedule_id attribute of the sensor."
+        }
+      }
+    },
+    "set_target": {
+      "name": "Change entity",
+      "description": "Change the controlled entity keeping presets and times (same kind).",
+      "fields": {
+        "schedule_id": {
+          "name": "Schedule ID",
+          "description": "schedule_id attribute of the sensor."
+        },
+        "entity_id": {
+          "name": "New entity",
+          "description": "Entity of the same kind."
         }
       }
     }

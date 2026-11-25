@@ -1,7 +1,7 @@
 """Costanti per Schedula."""
 
 DOMAIN = "schedula"
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 
 PLATFORMS = ["sensor", "switch"]
 
@@ -43,6 +43,7 @@ CARD_URL = "/schedula_static/schedula-card.js"
 SERVICE_SAVE = "save"
 SERVICE_SET_ENABLED = "set_enabled"
 SERVICE_APPLY_NOW = "apply_now"
+SERVICE_SET_TARGET = "set_target"
 
 ATTR_SCHEDULE_ID = "schedule_id"
 ATTR_PRESETS = "presets"

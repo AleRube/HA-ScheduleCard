@@ -2,6 +2,8 @@
 
 # Schedula – Programmatore settimanale per Home Assistant
 
+![Elenco e settimana](images/elenco.png)
+
 ![Anteprima](images/anteprima.png)
 
 Programmatore settimanale **generico** per Home Assistant, con card in stile cronotermostato: riscaldamento, raffrescamento, luci, antintrusione (tramite switch/input_boolean), tapparelle… Scegli un'entità, crea delle **impostazioni** (es. Comfort 22°, Inserito, Acceso) e assegnale a **fasce orarie** per ogni giorno della settimana.
@@ -46,13 +48,23 @@ Quando aggiungi l'integrazione scegli il **tipo di impianto** e poi i dettagli. 
 
 ## Configurazione
 1. **Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Schedula**. Scegli il tipo di impianto, poi i dettagli, il nome e l'entità da comandare. Puoi creare più schedulazioni, per esempio una per zona.
-2. In una dashboard aggiungi una card manuale:
+2. In una dashboard aggiungi la card **Schedula**: matita → *Aggiungi scheda* → cerca "Schedula". Nell'editor della card scegli:
+   - il **tipo di impianto**, per esempio solo HVAC o solo Luci;
+   - quali **schedulazioni** mostrare. Se non ne spunti nessuna, compaiono tutte quelle del tipo scelto, anche quelle create in futuro.
+
+   Così puoi farti una plancia per il riscaldamento, una per le luci e così via. In YAML:
 
 ```yaml
 type: custom:schedula-card
-entity: sensor.schedulazione_di_default   # facoltativo: senza, mostra tutte le schedulazioni
-idle_timeout: 120                         # facoltativo: secondi prima di tornare alla home
+title: Riscaldamento
+category: hvac          # facoltativo: hvac, luci, tvcc, antintrusione, tapparelle, irrigazione, ventilazione, acs, altro
+entities:               # facoltativo: elenco esplicito
+  - sensor.riscaldamento_zona_giorno
+  - sensor.riscaldamento_zona_notte
+idle_timeout: 120       # facoltativo: secondi prima di tornare all'elenco (0 = mai)
 ```
+
+La prima pagina è l'**elenco**: per ogni schedulazione mostra l'impostazione in corso, fino a che ora vale, la barra di oggi e l'interruttore per attivarla o disattivarla. Toccandone una si apre la settimana. Con `entity: sensor.xxx` al posto di `entities` la card apre direttamente la settimana di quella schedulazione.
 
 La card viene caricata automaticamente dall'integrazione: non serve aggiungere risorse a mano. Se dopo un aggiornamento vedi ancora la versione vecchia, svuota la cache del browser/app.
 
@@ -63,7 +75,8 @@ La card viene caricata automaticamente dall'integrazione: non serve aggiungere r
 - **Ora a mano**: tocca le cifre di ore o minuti per scriverle. L'icona dell'orologio apre il selettore.
 - **Impostazioni**: nome, colore, icona e valore. Tra i simboli ci sono lampadine accese e spente e antintrusione inserito e disinserito. Le icone usano il nero sui colori chiari e il bianco su quelli scuri. Se modifichi un'impostazione, cambia in tutte le fasce che la usano.
 - Dopo **2 minuti** senza modifiche la card torna alla schermata principale. Si può cambiare con `idle_timeout` (secondi, `0` = mai).
-- **Menu ⋮**: attiva/disattiva, applica ora, copia giorno.
+- **Menu ⋮**: attiva/disattiva, applica ora, **cambia entità comandata**, copia giorno.
+- **Cambio entità**: se ti accorgi di aver scelto la variabile sbagliata, cambiala dal menu ⋮ oppure da *Configura* nell'integrazione. Vengono proposte solo entità dello stesso tipo, così impostazioni e orari restano uguali.
 
 All'inizio di ogni fascia viene applicato il valore. Se nel frattempo cambi il termostato a mano, la modifica resta valida fino alla fascia successiva.
 
@@ -80,6 +93,7 @@ All'inizio di ogni fascia viene applicato il valore. Se nel frattempo cambi il t
 - `schedula.save`: `schedule_id`, `presets`, `week`. È il servizio usato dalla card.
 - `schedula.set_enabled`: `schedule_id`, `enabled`.
 - `schedula.apply_now`: `schedule_id`.
+- `schedula.set_target`: `schedule_id`, `entity_id`. Cambia l'entità mantenendo il programma, solo se è dello stesso tipo.
 
 Richiede Home Assistant 2024.11 o successivo. L'icona dell'integrazione compare da Home Assistant 2026.3 in poi (cartella `brand/`).
 

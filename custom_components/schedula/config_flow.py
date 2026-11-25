@@ -26,6 +26,7 @@ from .const import (
     DOMAIN,
     HVAC_MODE_NONE,
     TARGET_DOMAINS,
+    value_type,
 )
 from .profiles import (
     CAT_ALTRO,
@@ -141,14 +142,26 @@ class SchedulaOptionsFlow(OptionsFlow):
     """Modifica entità target e opzioni."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        if user_input is not None:
-            return self.async_create_entry(data=user_input)
-
         entry = self.config_entry
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            current = entry.options.get(CONF_TARGET, entry.data.get(CONF_TARGET))
+            if value_type(user_input[CONF_TARGET]) != value_type(current):
+                errors[CONF_TARGET] = "different_type"
+            else:
+                return self.async_create_entry(data=user_input)
+
         defaults = {
             CONF_TARGET: entry.options.get(CONF_TARGET, entry.data.get(CONF_TARGET)),
             CONF_HVAC_MODE: entry.options.get(CONF_HVAC_MODE, HVAC_MODE_NONE),
             CONF_APPLY_ON_START: entry.options.get(CONF_APPLY_ON_START, True),
         }
-        domains = CATEGORY_DOMAINS.get(entry.data.get(CONF_CATEGORY, CAT_ALTRO), TARGET_DOMAINS)
-        return self.async_show_form(step_id="init", data_schema=_options_schema(defaults, domains))
+        current = entry.options.get(CONF_TARGET, entry.data.get(CONF_TARGET))
+        domains = [
+            d
+            for d in CATEGORY_DOMAINS.get(entry.data.get(CONF_CATEGORY, CAT_ALTRO), TARGET_DOMAINS)
+            if value_type(f"{d}.x") == value_type(current)
+        ]
+        if user_input is not None:
+            defaults.update(user_input)
+        return self.async_show_form(step_id="init", data_schema=_options_schema(defaults, domains), errors=errors)
