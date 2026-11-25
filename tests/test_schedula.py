@@ -158,3 +158,37 @@ async def test_card_served(hass, hass_client):
     assert resp.status == 200
     assert "schedula-card" in await resp.text()
     assert add.call_args[0][1].startswith("/schedula_static/schedula-card.js?v=")
+
+
+async def test_alarm_and_hvac_mode(hass: HomeAssistant, freezer: FrozenDateTimeFactory):
+    """Antintrusione con codice e modalità caldo/freddo per impostazione."""
+    tz = dt_util.get_default_time_zone()
+    freezer.move_to(datetime(2026, 11, 24, 23, 30, 0, tzinfo=tz))  # martedì 23:30 -> notte
+    night = async_mock_service(hass, "alarm_control_panel", "alarm_arm_night")
+    hass.states.async_set("alarm_control_panel.casa", "disarmed", {"friendly_name": "Casa"})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"name": "Antintrusione", "target_entity": "alarm_control_panel.casa", "hvac_mode": "none", "apply_on_start": True, "alarm_code": "1234"},
+    )
+    await hass.async_start()
+    await hass.async_block_till_done()
+    assert night and night[-1].data == {"entity_id": "alarm_control_panel.casa", "code": "1234"}
+    assert hass.states.get("sensor.antintrusione").state == "Inserito notte"
+
+    # termostato: impostazione con modalità freddo e una spenta
+    cool = async_mock_service(hass, "climate", "set_temperature")
+    off = async_mock_service(hass, "climate", "turn_off")
+    entry = await _create(hass, target="climate.sala")
+    sensor = hass.states.get("sensor.ufficio")
+    presets = [
+        {"id": "fresco", "name": "Fresco", "icon": "mdi:snowflake", "color": "#5AB8FF", "value": 24, "hvac_mode": "cool"},
+        {"id": "spento", "name": "Spento", "icon": "mdi:power-off", "color": "#455A64", "value": 20, "hvac_mode": "off"},
+    ]
+    week = {d: [{"start": "00:00", "preset": "fresco"}] for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+    await hass.services.async_call(DOMAIN, "save", {"schedule_id": entry.entry_id, "presets": presets, "week": week}, blocking=True)
+    assert cool[-1].data == {"entity_id": "climate.sala", "temperature": 24.0, "hvac_mode": "cool"}
+    week["tue"] = [{"start": "00:00", "preset": "spento"}]
+    await hass.services.async_call(DOMAIN, "save", {"schedule_id": entry.entry_id, "presets": presets, "week": week}, blocking=True)
+    assert off and off[-1].data["entity_id"] == "climate.sala"
+    assert sensor is not None

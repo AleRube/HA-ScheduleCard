@@ -18,12 +18,16 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ALARM_SERVICES,
+    CONF_ALARM_CODE,
     CONF_APPLY_ON_START,
     CONF_HVAC_MODE,
     CONF_TARGET,
     DAYS,
     DOMAIN,
     HVAC_MODE_NONE,
+    HVAC_MODES_ALLOWED,
+    LOCK_SERVICES,
     OPTION_DOMAINS,
     PALETTE,
     STORAGE_VERSION,
@@ -94,6 +98,31 @@ def build_default(hass: HomeAssistant, target: str) -> dict[str, Any]:
                 {"start": "22:00", "preset": "basso"},
             ]
         )
+    elif domain == "alarm_control_panel":
+        presets = [
+            {"id": "inserito", "name": "Inserito", "icon": "mdi:shield-lock", "color": "#E53935", "value": "armed_away"},
+            {"id": "notte", "name": "Inserito notte", "icon": "mdi:shield-moon", "color": PALETTE[3], "value": "armed_night"},
+            {"id": "disinserito", "name": "Disinserito", "icon": "mdi:shield-off", "color": "#43A047", "value": "disarmed"},
+        ]
+        week = _week(
+            [
+                {"start": "00:00", "preset": "notte"},
+                {"start": "07:00", "preset": "disinserito"},
+                {"start": "23:00", "preset": "notte"},
+            ]
+        )
+    elif domain == "lock":
+        presets = [
+            {"id": "chiusa", "name": "Chiusa", "icon": "mdi:lock", "color": "#E53935", "value": "locked"},
+            {"id": "aperta", "name": "Aperta", "icon": "mdi:lock-open-variant", "color": "#43A047", "value": "unlocked"},
+        ]
+        week = _week(
+            [
+                {"start": "00:00", "preset": "chiusa"},
+                {"start": "08:00", "preset": "aperta"},
+                {"start": "20:00", "preset": "chiusa"},
+            ]
+        )
     elif vtype == VT_OPTION:
         options = list(attrs.get("options") or [])[:4] or ["opzione"]
         icons = ["mdi:numeric-1-circle", "mdi:numeric-2-circle", "mdi:numeric-3-circle", "mdi:numeric-4-circle"]
@@ -103,9 +132,10 @@ def build_default(hass: HomeAssistant, target: str) -> dict[str, Any]:
         ]
         week = _week([{"start": "00:00", "preset": "opt0"}])
     else:
+        light = domain == "light"
         presets = [
-            {"id": "acceso", "name": "Acceso", "icon": "mdi:power", "color": PALETTE[0], "value": "on"},
-            {"id": "spento", "name": "Spento", "icon": "mdi:power-off", "color": PALETTE[3], "value": "off"},
+            {"id": "acceso", "name": "Acceso", "icon": "mdi:lightbulb-on" if light else "mdi:power", "color": "#FFD166", "value": "on"},
+            {"id": "spento", "name": "Spento", "icon": "mdi:lightbulb-off" if light else "mdi:power-off", "color": "#455A64", "value": "off"},
         ]
         week = _week(
             [
@@ -137,15 +167,19 @@ def normalize(presets: Any, week: Any) -> tuple[list[dict], dict[str, list[dict]
             value = "on" if value else "off"
         if not isinstance(value, (int, float, str)):
             raise HomeAssistantError(f"Valore non valido per '{pid}'")
-        clean_presets.append(
-            {
-                "id": pid,
-                "name": str(raw.get("name") or pid)[:40],
-                "icon": str(raw.get("icon") or "mdi:circle"),
-                "color": str(raw.get("color") or PALETTE[0]),
-                "value": value,
-            }
-        )
+        clean = {
+            "id": pid,
+            "name": str(raw.get("name") or pid)[:40],
+            "icon": str(raw.get("icon") or "mdi:circle"),
+            "color": str(raw.get("color") or PALETTE[0]),
+            "value": value,
+        }
+        hvac_mode = raw.get("hvac_mode")
+        if hvac_mode:
+            if hvac_mode not in HVAC_MODES_ALLOWED:
+                raise HomeAssistantError(f"Modalità non valida: '{hvac_mode}'")
+            clean["hvac_mode"] = hvac_mode
+        clean_presets.append(clean)
 
     if not isinstance(week, dict):
         raise HomeAssistantError("Programma settimanale non valido")
@@ -337,7 +371,7 @@ class ScheduleManager:
         if preset is None:
             self._notify()
             return
-        key = (preset["id"], json.dumps(preset["value"]), self.target)
+        key = (preset["id"], json.dumps(preset["value"]), preset.get("hvac_mode"), self.target)
         if force or key != self._active_key:
             self._active_key = key
             await self._async_apply(preset)
@@ -349,14 +383,28 @@ class ScheduleManager:
         value = preset["value"]
         try:
             if domain in ("climate", "water_heater"):
-                if str(value).lower() == "off":
+                hvac_mode = preset.get("hvac_mode") or self.entry.options.get(CONF_HVAC_MODE, HVAC_MODE_NONE)
+                if str(value).lower() == "off" or hvac_mode == "off":
                     await self._call(domain, "turn_off", {"entity_id": entity_id})
                 else:
                     data: dict[str, Any] = {"entity_id": entity_id, "temperature": float(value)}
-                    hvac_mode = self.entry.options.get(CONF_HVAC_MODE, HVAC_MODE_NONE)
                     if domain == "climate" and hvac_mode and hvac_mode != HVAC_MODE_NONE:
                         data["hvac_mode"] = hvac_mode
                     await self._call(domain, "set_temperature", data)
+            elif domain == "alarm_control_panel":
+                service = ALARM_SERVICES.get(str(value))
+                if service is None:
+                    raise HomeAssistantError(f"Stato allarme non valido: {value}")
+                data = {"entity_id": entity_id}
+                code = self.entry.options.get(CONF_ALARM_CODE)
+                if code:
+                    data["code"] = code
+                await self._call(domain, service, data)
+            elif domain == "lock":
+                service = LOCK_SERVICES.get(str(value))
+                if service is None:
+                    raise HomeAssistantError(f"Stato serratura non valido: {value}")
+                await self._call(domain, service, {"entity_id": entity_id})
             elif domain in ("input_number", "number"):
                 await self._call(domain, "set_value", {"entity_id": entity_id, "value": float(value)})
             elif domain == "cover":

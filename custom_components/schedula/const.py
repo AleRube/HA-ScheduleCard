@@ -1,13 +1,14 @@
 """Costanti per Schedula."""
 
 DOMAIN = "schedula"
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 
 PLATFORMS = ["sensor", "switch"]
 
 CONF_TARGET = "target_entity"
 CONF_HVAC_MODE = "hvac_mode"
 CONF_APPLY_ON_START = "apply_on_start"
+CONF_ALARM_CODE = "alarm_code"
 
 HVAC_MODE_NONE = "none"
 
@@ -21,7 +22,7 @@ VT_ONOFF = "onoff"
 VT_OPTION = "option"
 
 NUMBER_DOMAINS = {"climate", "water_heater", "input_number", "number", "cover"}
-OPTION_DOMAINS = {"input_select", "select"}
+OPTION_DOMAINS = {"input_select", "select", "alarm_control_panel", "lock"}
 ONOFF_DOMAINS = {
     "switch",
     "light",
@@ -46,6 +47,18 @@ ATTR_SCHEDULE_ID = "schedule_id"
 ATTR_PRESETS = "presets"
 ATTR_WEEK = "week"
 ATTR_ENABLED = "enabled"
+
+HVAC_MODES_ALLOWED = {"heat", "cool", "heat_cool", "auto", "dry", "fan_only", "off"}
+
+ALARM_SERVICES = {
+    "armed_away": "alarm_arm_away",
+    "armed_home": "alarm_arm_home",
+    "armed_night": "alarm_arm_night",
+    "armed_vacation": "alarm_arm_vacation",
+    "armed_custom_bypass": "alarm_arm_custom_bypass",
+    "disarmed": "alarm_disarm",
+}
+LOCK_SERVICES = {"locked": "lock", "unlocked": "unlock", "open": "open"}
 
 PALETTE = [
     "#FDB48A",  # arancio chiaro (Comfort)

@@ -2,12 +2,15 @@
 
 ![Anteprima](images/anteprima.png)
 
-Integrazione custom con card Lovelace in stile cronotermostato: scegli un'entità, crea delle **impostazioni** (es. Comfort 22°, Economico 18°, Notte 16°) e assegnale a **fasce orarie** per ogni giorno della settimana.
+Programmatore settimanale **generico** per Home Assistant, con card in stile cronotermostato: riscaldamento, raffrescamento, luci, antintrusione, serrature, tapparelle… Scegli un'entità, crea delle **impostazioni** (es. Comfort 22°, Inserito, Acceso) e assegnale a **fasce orarie** per ogni giorno della settimana.
 
 ## Entità supportate
 | Dominio | Cosa imposta l'impostazione |
 |---|---|
-| `climate`, `water_heater` | temperatura (oppure *Spento*) |
+| `climate` | temperatura + modalità per impostazione (Caldo, Freddo, Auto, Spento…) |
+| `water_heater` | temperatura (oppure *Spento*) |
+| `alarm_control_panel` | Inserito totale / in casa / notte / vacanza, Disinserito |
+| `lock` | Chiusa / Aperta |
 | `input_number`, `number` | valore numerico |
 | `cover` | posizione 0–100 % |
 | `input_select`, `select` | opzione |
@@ -32,14 +35,18 @@ Integrazione custom con card Lovelace in stile cronotermostato: scegli un'entit�
 ```yaml
 type: custom:schedula-card
 entity: sensor.schedulazione_di_default   # facoltativo: senza, mostra tutte le schedulazioni
+idle_timeout: 120                         # facoltativo: secondi prima di tornare alla home
 ```
 
 La card viene caricata automaticamente dall'integrazione: non serve aggiungere risorse a mano. Se dopo un aggiornamento vedi ancora la versione vecchia, svuota la cache del browser/app.
 
 ## Come funziona
 - **Settimana**: barre colorate per ogni giorno, con l'indicatore dell'ora attuale. Tocca un giorno per aprirlo.
-- **Giorno**: elenco delle fasce. Con **+** aggiungi un intervallo (inizio, fine, impostazione): sovrascrive le fasce esistenti, come nell'app BTicino. Tocca una fascia per modificarla o eliminarla. Da qui puoi anche **copiare il giorno** su altri giorni.
-- **Impostazioni**: nome, colore, icona e valore. Se modifichi un'impostazione, cambia in tutte le fasce che la usano.
+- **Giorno**: elenco delle fasce con inizio e fine. Con **+** aggiungi un orario: l'inizio è proposto dove finisce l'orario precedente all'ultimo, con durata di 1 ora. Tocca una fascia per modificarla o eliminarla. Da qui puoi anche **copiare il giorno** su altri giorni.
+- **Orari collegati**: se cambi l'inizio di un orario, si sposta la fine di quello prima. Se cambi la fine, si sposta l'inizio di quello dopo.
+- **Ora a mano**: tocca le cifre di ore o minuti per scriverle. L'icona dell'orologio apre il selettore.
+- **Impostazioni**: nome, colore, icona e valore. Le icone usano il nero sui colori chiari e il bianco su quelli scuri. Se modifichi un'impostazione, cambia in tutte le fasce che la usano.
+- Dopo **2 minuti** senza modifiche la card torna alla schermata principale. Si può cambiare con `idle_timeout` (secondi, `0` = mai).
 - **Menu ⋮**: attiva/disattiva, applica ora, copia giorno.
 
 All'inizio di ogni fascia viene applicato il valore. Se nel frattempo cambi il termostato a mano, la modifica resta valida fino alla fascia successiva.
@@ -50,7 +57,8 @@ All'inizio di ogni fascia viene applicato il valore. Se nel frattempo cambi il t
 
 ## Opzioni (Configura)
 - Cambio dell'entità da comandare.
-- **Modalità HVAC** da inviare insieme alla temperatura (es. `heat`): così un termostato spento si riaccende.
+- **Modalità HVAC predefinita**, usata per le impostazioni che hanno "Non modificare".
+- **Codice allarme**: serve solo per gli antintrusione che lo richiedono.
 - Applicazione dell'impostazione all'avvio di Home Assistant.
 
 ## Servizi

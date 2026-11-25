@@ -3,20 +3,46 @@
  * Interfaccia ispirata alle app dei cronotermostati: settimana a barre,
  * giorno con fasce orarie, editor intervallo e editor impostazioni.
  */
-const SCHEDULA_CARD_VERSION = '1.0.1';
+const SCHEDULA_CARD_VERSION = '1.1.0';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 const DAY_LONG = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-const COLORS = ['#FDB48A', '#FF7A75', '#8FD8C0', '#5AB8FF', '#8E8CF8', '#FFD166', '#C792EA', '#9E9E9E'];
+const COLORS = [
+  '#FDB48A', '#FF7A75', '#8FD8C0', '#5AB8FF', '#8E8CF8', '#FFD166',
+  '#C792EA', '#F5F5F5', '#E53935', '#43A047', '#1E88E5', '#455A64',
+];
 const ICONS = [
-  'mdi:home', 'mdi:fire', 'mdi:leaf', 'mdi:weather-night', 'mdi:snowflake', 'mdi:white-balance-sunny',
-  'mdi:power', 'mdi:power-off', 'mdi:briefcase', 'mdi:sofa', 'mdi:bed', 'mdi:airplane',
+  'mdi:home', 'mdi:fire', 'mdi:snowflake', 'mdi:leaf', 'mdi:weather-night', 'mdi:white-balance-sunny',
+  'mdi:lightbulb-on', 'mdi:lightbulb-off', 'mdi:shield-lock', 'mdi:shield-off', 'mdi:shield-home', 'mdi:shield-moon',
+  'mdi:power', 'mdi:power-off', 'mdi:fan', 'mdi:water', 'mdi:window-shutter', 'mdi:window-shutter-open',
+  'mdi:lock', 'mdi:lock-open-variant', 'mdi:thermometer', 'mdi:briefcase', 'mdi:sofa', 'mdi:bed',
+  'mdi:airplane', 'mdi:clock-outline',
 ];
 const NUMBER_DOMAINS = ['climate', 'water_heater', 'input_number', 'number', 'cover'];
-const OPTION_DOMAINS = ['input_select', 'select'];
+const OPTION_DOMAINS = ['input_select', 'select', 'alarm_control_panel', 'lock'];
+// Opzioni fisse con etichetta per i domini che hanno stati predefiniti
+const FIXED_OPTIONS = {
+  alarm_control_panel: [
+    ['armed_away', 'Inserito totale'], ['armed_home', 'Inserito in casa'], ['armed_night', 'Inserito notte'],
+    ['armed_vacation', 'Inserito vacanza'], ['disarmed', 'Disinserito'],
+  ],
+  lock: [['locked', 'Chiusa'], ['unlocked', 'Aperta']],
+};
+const HVAC_LABELS = { '': 'Non modificare', heat: 'Caldo', cool: 'Freddo', heat_cool: 'Caldo/Freddo', auto: 'Auto', dry: 'Deumidifica', fan_only: 'Solo ventola', off: 'Spento' };
+const IDLE_DEFAULT = 120; // secondi prima di tornare alla schermata principale
+
+// Testo nero su colori chiari, bianco su colori scuri (alto contrasto)
+function contrastColor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return '#fff';
+  const n = parseInt(m[1], 16);
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return L > 0.3 ? '#000' : '#fff';
+}
 const DOMAIN_ICONS = {
-  climate: 'mdi:home-thermometer', water_heater: 'mdi:water-boiler', input_number: 'mdi:ray-vertex',
+  climate: 'mdi:home-thermometer', alarm_control_panel: 'mdi:shield-home', lock: 'mdi:lock', water_heater: 'mdi:water-boiler', input_number: 'mdi:ray-vertex',
   number: 'mdi:numeric', cover: 'mdi:window-shutter', light: 'mdi:lightbulb', switch: 'mdi:toggle-switch',
   fan: 'mdi:fan', input_boolean: 'mdi:toggle-switch-outline', select: 'mdi:format-list-bulleted',
   input_select: 'mdi:format-list-bulleted', automation: 'mdi:robot', script: 'mdi:script-text',
@@ -131,7 +157,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .tname { color: var(--sc-fg); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pval { font-weight: 600; white-space: nowrap; }
 .badge { font-size: .7em; font-weight: 600; color: var(--sc-accent); margin-left: auto; }
-.circle { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
+.circle { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none; }
 .circle ha-icon { --mdc-icon-size: 22px; }
 .list-pad { padding-bottom: 86px; position: relative; }
 .fab { position: absolute; right: 16px; bottom: 16px; width: 64px; height: 64px; border-radius: 50%; background: var(--sc-accent); color: #fff;
@@ -191,6 +217,18 @@ input[type=time] { font: inherit; font-size: 1.05em; color: var(--sc-fg); backgr
 .seg2 button.on { background: var(--sc-accent); color: #fff; }
 .chk { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; }
 .empty { padding: 28px 20px; color: var(--sc-muted); line-height: 1.5; }
+.tf { display: flex; align-items: center; gap: 2px; background: var(--sc-surface); border-radius: 10px; padding: 2px 2px 2px 8px; position: relative; }
+.tf.dis { opacity: .5; }
+.tf input.hm { width: 2.1em; font: inherit; font-size: 1.15em; font-variant-numeric: tabular-nums; text-align: center; color: var(--sc-fg);
+  background: transparent; border: 0; border-radius: 6px; padding: 6px 0; outline: none; }
+.tf input.hm:focus { background: var(--sc-accent); color: #fff; }
+.tf .colon { font-size: 1.15em; }
+.tf .clk { width: 38px; height: 38px; display: grid; place-items: center; color: var(--sc-muted); }
+.tf input.native { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+.range { color: var(--sc-muted); font-size: .8em; }
+.modes { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 16px 14px; }
+.modes button { padding: 9px 14px; border-radius: 10px; background: var(--sc-surface); font-size: .95em; }
+.modes button.on { background: var(--sc-accent); color: #fff; }
 .toast { position: absolute; left: 16px; right: 16px; bottom: 16px; background: #323232; color: #fff; padding: 12px 16px; border-radius: 10px;
   font-size: .9em; z-index: 10; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 `;
@@ -209,6 +247,17 @@ class SchedulaCard extends HTMLElement {
     this.shadowRoot.addEventListener('click', (e) => this._onClick(e));
     this.shadowRoot.addEventListener('input', (e) => this._onInput(e));
     this.shadowRoot.addEventListener('change', (e) => this._onInput(e));
+    this.shadowRoot.addEventListener('focusin', (e) => {
+      const el = e.composedPath()[0];
+      if (el && el.classList && el.classList.contains('hm')) {
+        el.select();
+        setTimeout(() => el.select && el.select(), 0);
+      }
+    });
+    this._lastActivity = Date.now();
+    ['click', 'input', 'keydown', 'touchstart', 'pointerdown'].forEach((ev) =>
+      this.shadowRoot.addEventListener(ev, () => (this._lastActivity = Date.now()), { passive: true, capture: true })
+    );
   }
 
   static getStubConfig(hass) {
@@ -229,10 +278,27 @@ class SchedulaCard extends HTMLElement {
     this._timer = setInterval(() => {
       if (this._hass && ['week', 'day'].includes(this._view) && !this._menu) this._render();
     }, 60000);
+    // Dopo N secondi senza modifiche torna alla schermata principale della card
+    this._idleTimer = setInterval(() => this._checkIdle(), 5000);
+  }
+
+  _checkIdle() {
+    const idle = Number(this._config?.idle_timeout ?? IDLE_DEFAULT);
+    if (!this._hass || !idle || idle <= 0) return;
+    if (this._view === 'week' && !this._menu) return;
+    if (Date.now() - this._lastActivity < idle * 1000) return;
+    this._view = 'week';
+    this._stack = [];
+    this._menu = null;
+    this._interval = null;
+    this._presetEdit = null;
+    this._loadDraft();
+    this._render();
   }
 
   disconnectedCallback() {
     clearInterval(this._timer);
+    clearInterval(this._idleTimer);
   }
 
   set hass(hass) {
@@ -325,9 +391,26 @@ class SchedulaCard extends HTMLElement {
     return { min: Number(a.min ?? 0), max: Number(a.max ?? 100), step: Number(a.step ?? 1) };
   }
 
+  _fmtP(p) {
+    if (!p) return '—';
+    if (this._domain() === 'climate' && p.hvac_mode === 'off') return 'Spento';
+    const base = this._fmt(p.value);
+    if (this._domain() === 'climate' && p.hvac_mode && String(p.value).toLowerCase() !== 'off') return `${base} · ${HVAC_LABELS[p.hvac_mode] || p.hvac_mode}`;
+    return base;
+  }
+
+  _fixedOptions() {
+    return FIXED_OPTIONS[this._domain()] || null;
+  }
+
   _fmt(v) {
     if (v === null || v === undefined || v === '') return '—';
     const vt = this._vt();
+    const fixed = this._fixedOptions();
+    if (fixed) {
+      const f = fixed.find(([k]) => k === String(v));
+      return f ? f[1] : String(v);
+    }
     if (this._isTemp() && String(v).toLowerCase() === 'off') return 'Spento';
     if (vt === 'number') {
       const n = Number(v);
@@ -462,20 +545,48 @@ class SchedulaCard extends HTMLElement {
       case 'open-presets':
         this._push('presets');
         break;
-      case 'add-interval':
-        this._interval = { mode: 'add', start: '12:00', end: '13:00', preset: draft.presets[0]?.id };
+      case 'add-interval': {
+        // Inizio = fine dell'orario precedente all'ultimo (cioè inizio dell'ultimo), durata 1 ora
+        const slots = draft.week[DAYS[this._day]] || [];
+        const lastStart = slots.length ? toMin(slots[slots.length - 1].start) : 0;
+        const start = lastStart > 0 ? lastStart : 8 * 60;
+        const end = Math.min(start + 60, 1440);
+        const last = slots[slots.length - 1];
+        const other = draft.presets.find((p) => p.id !== last?.preset) || draft.presets[0];
+        this._interval = { mode: 'add', start: toHHMM(start), end: toHHMM(end), preset: other?.id };
         this._push('interval');
         break;
+      }
       case 'edit-slot': {
         const slots = draft.week[DAYS[this._day]];
         const idx = Number(ds.idx);
         const s = slots[idx];
         const os = toMin(s.start);
         const oe = idx + 1 < slots.length ? toMin(slots[idx + 1].start) : 1440;
-        this._interval = { mode: 'edit', start: s.start, end: toHHMM(oe % 1440), preset: s.preset, os, oe };
+        this._interval = { mode: 'edit', idx, count: slots.length, start: s.start, end: toHHMM(oe), preset: s.preset, os, oe };
         this._push('interval');
         break;
       }
+      case 'pick-time': {
+        const f = ds.field;
+        const native = this.shadowRoot.querySelector(`input.native[data-field="${f}-native"]`);
+        if (!native) break;
+        const cur = this._interval[f] === '24:00' ? '00:00' : this._interval[f];
+        native.value = cur;
+        try {
+          native.showPicker();
+        } catch (err) {
+          native.focus();
+        }
+        break;
+      }
+      case 'set-hvac':
+        this._presetEdit.hvac_mode = ds.mode || undefined;
+        if (ds.mode !== 'off' && String(this._presetEdit.value).toLowerCase() === 'off') {
+          this._presetEdit.value = this._snap((this._bounds().min + this._bounds().max) / 2);
+        }
+        this._render();
+        break;
       case 'pick-preset':
         this._interval.preset = ds.id;
         this._render();
@@ -500,7 +611,7 @@ class SchedulaCard extends HTMLElement {
         const opts = this._target()?.attributes?.options || [];
         let value = 'on';
         if (vt === 'number') value = this._snap((b.min + b.max) / 2);
-        if (vt === 'option') value = opts[0] ?? '';
+        if (vt === 'option') value = this._fixedOptions()?.[0]?.[0] ?? opts[0] ?? '';
         this._presetEdit = {
           isNew: true,
           id: 'p' + Date.now().toString(36),
@@ -533,7 +644,7 @@ class SchedulaCard extends HTMLElement {
         this._render();
         break;
       }
-      case 'temp-off': {
+      case 'temp-off-legacy': {
         const pe = this._presetEdit;
         if (String(pe.value).toLowerCase() === 'off') {
           pe.value = pe._lastNum ?? this._snap((this._bounds().min + this._bounds().max) / 2);
@@ -583,9 +694,12 @@ class SchedulaCard extends HTMLElement {
     const f = e.target.dataset?.field;
     if (!f) return;
     const v = e.target.value;
-    if (f === 'interval-start') this._interval.start = v;
-    else if (f === 'interval-end') this._interval.end = v;
-    else if (f === 'preset-name') this._presetEdit.name = v;
+    const tm = /^(start|end)-(h|m|native)$/.exec(f);
+    if (tm) {
+      this._onTimeInput(e, tm[1], tm[2]);
+      return;
+    }
+    if (f === 'preset-name') this._presetEdit.name = v;
     else if (f === 'preset-slider') {
       const n = this._snap(Number(v));
       this._presetEdit.value = n;
@@ -595,6 +709,50 @@ class SchedulaCard extends HTMLElement {
       const out = this.shadowRoot.getElementById('pval');
       if (out) out.textContent = this._fmt(n);
     }
+  }
+
+  _onTimeInput(e, field, part) {
+    const box = e.target.closest('.tf');
+    const hEl = box.querySelector('input[data-field$="-h"]');
+    const mEl = box.querySelector('input[data-field$="-m"]');
+    if (part === 'native') {
+      if (!e.target.value) return;
+      const [h, m] = e.target.value.split(':');
+      let val = `${h}:${m}`;
+      if (field === 'end' && val === '00:00') val = '24:00';
+      this._interval[field] = val;
+      [hEl.value, mEl.value] = val.split(':');
+      return;
+    }
+    // solo cifre
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2);
+    if (e.type === 'input' && part === 'h' && e.target.value.length === 2) {
+      mEl.focus();
+      mEl.select();
+    }
+    let h = parseInt(hEl.value || '0', 10);
+    let m = parseInt(mEl.value || '0', 10);
+    const maxH = field === 'end' ? 24 : 23;
+    h = Math.min(Math.max(h, 0), maxH);
+    m = Math.min(Math.max(m, 0), 59);
+    if (h === 24) m = 0;
+    this._interval[field] = `${pad(h)}:${pad(m)}`;
+    if (e.type === 'change') {
+      hEl.value = pad(h);
+      mEl.value = pad(m);
+    }
+  }
+
+  _timeField(field, value, disabled) {
+    const [h, m] = String(value || '00:00').split(':');
+    const dis = disabled ? 'disabled' : '';
+    return `<div class="tf ${disabled ? 'dis' : ''}">
+      <input class="hm" data-field="${field}-h" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${esc(h)}" aria-label="Ore" ${dis}>
+      <span class="colon">:</span>
+      <input class="hm" data-field="${field}-m" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="${esc(m)}" aria-label="Minuti" ${dis}>
+      ${disabled ? '<span style="width:6px"></span>' : `<button class="clk" data-action="pick-time" data-field="${field}" aria-label="Scegli ora"><ha-icon icon="mdi:clock-outline"></ha-icon></button>`}
+      <input type="time" class="native" data-field="${field}-native" tabindex="-1">
+    </div>`;
   }
 
   _snap(v) {
@@ -607,16 +765,24 @@ class SchedulaCard extends HTMLElement {
   _saveInterval() {
     const it = this._interval;
     if (!it.start || !it.end) return this._toast('Imposta inizio e fine');
-    const s = toMin(it.start);
+    let s = toMin(it.start);
     let e = toMin(it.end);
     if (e === 0) e = 1440;
+    if (it.mode === 'edit') {
+      if (it.os === 0) s = 0; // il primo orario parte sempre da 00:00
+      if (it.oe === 1440) e = 1440; // l'ultimo finisce sempre a 24:00
+    }
     if (e <= s) return this._toast("L'ora di fine deve essere successiva all'inizio");
     if (!this._preset(it.preset)) return this._toast("Scegli un'impostazione");
     const d = this._day;
     const arr = this._dayArr(d);
     if (it.mode === 'edit') {
-      const base = it.os === 0 ? this._prevLast(d) ?? arr[it.os] : arr[it.os - 1];
-      arr.fill(base, it.os, it.oe);
+      // Orari collegati: spostando l'inizio si sposta la fine del precedente,
+      // spostando la fine si sposta l'inizio del successivo.
+      const prevP = it.os > 0 ? arr[it.os - 1] : null;
+      const nextP = it.oe < 1440 ? arr[it.oe] : null;
+      if (s > it.os && prevP) arr.fill(prevP, it.os, s);
+      if (e < it.oe && nextP) arr.fill(nextP, e, it.oe);
     }
     arr.fill(it.preset, s, e);
     this._draft.week[DAYS[d]] = arrayToSlots(arr);
@@ -629,7 +795,8 @@ class SchedulaCard extends HTMLElement {
     if (!confirm('Eliminare questo intervallo orario?')) return;
     const d = this._day;
     const arr = this._dayArr(d);
-    const base = it.os === 0 ? this._prevLast(d) ?? arr[it.os] : arr[it.os - 1];
+    // il precedente si allunga fino alla fine; se è il primo, il successivo parte da 00:00
+    const base = it.os > 0 ? arr[it.os - 1] : it.oe < 1440 ? arr[it.oe] : arr[it.os];
     arr.fill(base, it.os, it.oe);
     this._draft.week[DAYS[d]] = arrayToSlots(arr);
     this._save();
@@ -641,6 +808,7 @@ class SchedulaCard extends HTMLElement {
     const name = (pe.name || '').trim();
     if (!name) return this._toast('Inserisci un nome');
     const preset = { id: pe.id, name, icon: pe.icon, color: pe.color, value: pe.value };
+    if (this._domain() === 'climate' && pe.hvac_mode) preset.hvac_mode = pe.hvac_mode;
     const list = this._draft.presets;
     const idx = list.findIndex((p) => p.id === pe.id);
     if (idx >= 0) list[idx] = preset;
@@ -670,7 +838,8 @@ class SchedulaCard extends HTMLElement {
   // ------------------------------------------------------------ render
   _circle(p, size) {
     const s = size ? `width:${size}px;height:${size}px;` : '';
-    return `<span class="circle" style="background:${esc(p?.color || '#888')};${s}"><ha-icon icon="${esc(p?.icon || 'mdi:help')}"></ha-icon></span>`;
+    const bg = p?.color || '#888888';
+    return `<span class="circle" style="background:${esc(bg)};color:${contrastColor(bg)};${s}"><ha-icon icon="${esc(p?.icon || 'mdi:help')}"></ha-icon></span>`;
   }
 
   _header({ title, sub, subOff, back, trash, menu, titleMenu }) {
@@ -746,7 +915,7 @@ class SchedulaCard extends HTMLElement {
       nextTxt = ` · poi <span class="dot" style="background:${esc(nxt.color)}"></span> <b>${esc(nxt.name)}</b> ${dd === today ? 'alle' : DAY_SHORT[dd].toLowerCase() + ' alle'} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
     }
     const status = cur
-      ? `<div class="status">Ora: <span class="dot" style="background:${esc(cur.color)}"></span><b>${esc(cur.name)}</b> ${esc(this._fmt(cur.value))}${nextTxt}</div>`
+      ? `<div class="status">Ora: <span class="dot" style="background:${esc(cur.color)}"></span><b>${esc(cur.name)}</b> ${esc(this._fmtP(cur))}${nextTxt}</div>`
       : '';
     const rows = DAYS.map(
       (k, i) => `<div class="day-row" data-action="open-day" data-day="${i}">
@@ -772,11 +941,11 @@ class SchedulaCard extends HTMLElement {
         const to = i + 1 < slots.length ? toMin(slots[i + 1].start) : 1440;
         const active = isToday && nowMin >= from && nowMin < to && this._attr().enabled;
         return `<div class="slot ${active ? 'active' : ''}" data-action="edit-slot" data-idx="${i}">
-          <div class="slot-time"><ha-icon icon="mdi:clock-outline"></ha-icon><span>${esc(s.start)}</span></div>
+          <div class="slot-time"><ha-icon icon="mdi:clock-outline"></ha-icon><span>${esc(s.start)}</span><span class="range">${toHHMM(to)}</span></div>
           <div class="vsep"></div>
           <div class="slot-main">
             <div class="slot-top">${this._circle(p)}<span class="pname">${esc(p?.name || s.preset)}</span>${active ? '<span class="badge">IN CORSO</span>' : ''}</div>
-            <div class="slot-bottom"><span class="tname">${esc(this._targetName())}</span><span class="pval">${esc(this._fmt(p?.value))}</span></div>
+            <div class="slot-bottom"><span class="tname">${esc(this._targetName())}</span><span class="pval">${esc(this._fmtP(p))}</span></div>
           </div>
         </div>`;
       })
@@ -797,7 +966,7 @@ class SchedulaCard extends HTMLElement {
         return `<div class="opt-row" ${selectable ? `data-action="pick-preset" data-id="${esc(p.id)}"` : `data-action="edit-preset" data-id="${esc(p.id)}"`}>
           ${selectable ? `<span class="radio ${sel ? 'on' : ''}">${sel ? '<ha-icon icon="mdi:check-bold"></ha-icon>' : ''}</span>` : ''}
           ${this._circle(p)}
-          <span class="opt-name">${esc(p.name)}<small>${esc(this._fmt(p.value))}</small></span>
+          <span class="opt-name">${esc(p.name)}<small>${esc(this._fmtP(p))}</small></span>
           <button class="pill" data-action="edit-preset" data-id="${esc(p.id)}">Modifica</button>
         </div>`;
       })
@@ -807,20 +976,24 @@ class SchedulaCard extends HTMLElement {
   _viewInterval() {
     const it = this._interval;
     const day = DAY_LONG[this._day];
-    const canDelete = it.mode === 'edit' && it.os > 0;
+    const canDelete = it.mode === 'edit' && it.count > 1;
+    const lockStart = it.mode === 'edit' && it.os === 0;
+    const lockEnd = it.mode === 'edit' && it.oe === 1440;
     return `${this._header({
       title: it.mode === 'add' ? 'Aggiungi un intervallo orario' : 'Modifica intervallo orario',
       back: true,
       trash: canDelete ? 'delete-interval' : null,
     })}
       <div class="sec">Intervallo orario</div>
-      <div class="row"><label>Inizio</label><div class="timebox">${day}<input type="time" data-field="interval-start" value="${esc(it.start)}"></div></div>
-      <div class="row"><label>Fine</label><div class="timebox">${day}<input type="time" data-field="interval-end" value="${esc(it.end)}"></div></div>
-      <div class="hint">Fine 00:00 = fino a mezzanotte. L'intervallo sovrascrive le fasce esistenti.</div>
+      <div class="row"><label>Inizio</label><div class="timebox">${day}${this._timeField('start', lockStart ? '00:00' : it.start, lockStart)}</div></div>
+      <div class="row"><label>Fine</label><div class="timebox">${day}${this._timeField('end', lockEnd ? '24:00' : it.end, lockEnd)}</div></div>
+      <div class="hint">${it.mode === 'edit'
+        ? "Tocca le cifre per scriverle a mano. Cambiando l'inizio si sposta la fine dell'orario precedente; cambiando la fine si sposta l'inizio del successivo."
+        : "Tocca le cifre per scriverle a mano. Il nuovo orario sostituisce quello che c'era in quella fascia."}</div>
       <div class="sec">${this._settingsLabel('section')}</div>
       ${this._presetRows(true)}
       <div class="add" data-action="new-preset"><ha-icon icon="mdi:plus"></ha-icon><span>${this._isTemp() ? 'Aggiungi un nuovo set di temperature personalizzate' : 'Aggiungi una nuova impostazione'}</span></div>
-      <button class="cta" data-action="save-interval">Convalida</button>`;
+      <button class="cta" data-action="save-interval">Salva</button>`;
   }
 
   _viewPresets() {
@@ -835,7 +1008,7 @@ class SchedulaCard extends HTMLElement {
     const vt = this._vt();
     if (vt === 'number') {
       const b = this._bounds();
-      const off = this._isTemp() && String(pe.value).toLowerCase() === 'off';
+      const off = this._isTemp() && (String(pe.value).toLowerCase() === 'off' || pe.hvac_mode === 'off');
       const n = off ? b.min : Number(pe.value);
       const p = Math.min(1, Math.max(0, (n - b.min) / (b.max - b.min || 1)));
       const ticks = '<i></i>'.repeat(12);
@@ -845,8 +1018,14 @@ class SchedulaCard extends HTMLElement {
         </div>
         <div class="steppers"><span>${esc(this._fmt(b.min))} – ${esc(this._fmt(b.max))}</span>
           <div><button data-action="step" data-dir="-1" ${off ? 'disabled' : ''}>−</button><button data-action="step" data-dir="1" ${off ? 'disabled' : ''}>+</button></div></div>`;
-      if (this._isTemp()) {
-        html += `<div class="chk" data-action="temp-off"><span class="radio ${off ? 'on' : ''}">${off ? '<ha-icon icon="mdi:check-bold"></ha-icon>' : ''}</span>Spegni ${this._domain() === 'climate' ? 'il termostato' : "l'apparecchio"} in questa fascia</div>`;
+      if (this._domain() === 'climate') {
+        const avail = this._target()?.attributes?.hvac_modes || ['heat', 'cool', 'auto', 'off'];
+        const modes = ['', ...Object.keys(HVAC_LABELS).filter((k) => k && avail.includes(k))];
+        const cur = pe.hvac_mode || (String(pe.value).toLowerCase() === 'off' ? 'off' : '');
+        html = `<div class="sec" style="border:0;padding-top:4px;padding-bottom:8px;font-size:1em">Modalità</div>
+          <div class="modes">${modes.map((m) => `<button class="${m === cur ? 'on' : ''}" data-action="set-hvac" data-mode="${m}">${HVAC_LABELS[m]}</button>`).join('')}</div>` + html;
+      } else if (this._isTemp()) {
+        html += `<div class="chk" data-action="temp-off-legacy"><span class="radio ${off ? 'on' : ''}">${off ? '<ha-icon icon="mdi:check-bold"></ha-icon>' : ''}</span>Spegni l'apparecchio in questa fascia</div>`;
       }
       return html;
     }
@@ -857,12 +1036,13 @@ class SchedulaCard extends HTMLElement {
         <button class="${!on ? 'on' : ''}" data-action="set-val" data-val="off"><ha-icon icon="mdi:power-off"></ha-icon>Spento</button>
       </div>`;
     }
-    const opts = this._target()?.attributes?.options || [];
-    const list = opts.includes(pe.value) || !pe.value ? opts : [pe.value, ...opts];
+    const fixed = this._fixedOptions();
+    let list = fixed || (this._target()?.attributes?.options || []).map((o) => [o, o]);
+    if (pe.value && !list.some(([k]) => String(k) === String(pe.value))) list = [[pe.value, pe.value], ...list];
     return list
-      .map((o) => {
-        const sel = String(o) === String(pe.value);
-        return `<div class="opt-row" data-action="set-val" data-val="${esc(o)}"><span class="radio ${sel ? 'on' : ''}">${sel ? '<ha-icon icon="mdi:check-bold"></ha-icon>' : ''}</span><span class="opt-name">${esc(o)}</span></div>`;
+      .map(([k, label]) => {
+        const sel = String(k) === String(pe.value);
+        return `<div class="opt-row" data-action="set-val" data-val="${esc(k)}"><span class="radio ${sel ? 'on' : ''}">${sel ? '<ha-icon icon="mdi:check-bold"></ha-icon>' : ''}</span><span class="opt-name">${esc(label)}</span></div>`;
       })
       .join('');
   }
@@ -870,7 +1050,7 @@ class SchedulaCard extends HTMLElement {
   _viewPreset() {
     const pe = this._presetEdit;
     const colors = COLORS.map((c) => `<span class="chip ${c === pe.color ? 'on' : ''}" style="background:${c}" data-action="set-color" data-color="${c}"></span>`).join('');
-    const icons = ICONS.map((i) => `<span class="chip ic ${i === pe.icon ? 'on' : ''}" data-action="set-icon" data-icon="${i}"><ha-icon icon="${i}"></ha-icon></span>`).join('');
+    const icons = ICONS.map((i) => `<span class="chip ic ${i === pe.icon ? 'on' : ''}" style="${i === pe.icon ? `background:${esc(pe.color)};color:${contrastColor(pe.color)}` : ''}" data-action="set-icon" data-icon="${i}"><ha-icon icon="${i}"></ha-icon></span>`).join('');
     return `${this._header({ title: pe.isNew ? 'Nuova impostazione' : 'Modifica le impostazioni', back: true, trash: pe.isNew ? null : 'delete-preset' })}
       <div class="name-row">${this._circle(pe, 44)}
         <label class="field"><span>Nome</span><input type="text" maxlength="40" data-field="preset-name" value="${esc(pe.name)}" placeholder="Nome"></label>
@@ -881,7 +1061,7 @@ class SchedulaCard extends HTMLElement {
       <div class="note">Le modifiche sono applicate a tutti gli intervalli orari dove queste impostazioni vengono usate.</div>
       <div class="tgt"><ha-icon icon="${esc(this._targetIcon())}"></ha-icon><span class="n">${esc(this._targetName())}</span><span class="v" id="pval">${esc(this._fmt(pe.value))}</span></div>
       ${this._valueControl()}
-      <button class="cta" data-action="save-preset">Convalida</button>`;
+      <button class="cta" data-action="save-preset">Salva</button>`;
   }
 
   _viewCopy() {
@@ -895,7 +1075,7 @@ class SchedulaCard extends HTMLElement {
       <div class="sec">Copia il programma su</div>
       ${rows}
       <div class="add" data-action="copy-all"><ha-icon icon="mdi:checkbox-multiple-marked-outline"></ha-icon><span>Seleziona tutti</span></div>
-      <button class="cta" data-action="copy-save" ${c.to.length ? '' : 'disabled'}>Convalida</button>`;
+      <button class="cta" data-action="copy-save" ${c.to.length ? '' : 'disabled'}>Salva</button>`;
   }
 
   _render() {

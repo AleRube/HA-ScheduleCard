@@ -3,12 +3,13 @@
     "step": {
       "user": {
         "title": "New schedule",
-        "description": "Choose the entity to control (thermostat, input_number, switch, light, select…). Times and presets are edited from the card.",
+        "description": "Choose the entity to control: thermostat, light, switch, alarm panel, lock, cover, input_number, select… Times and presets are edited from the card.",
         "data": {
           "name": "Name",
           "target_entity": "Entity to control",
-          "hvac_mode": "HVAC mode to set (thermostats only)",
-          "apply_on_start": "Apply immediately when Home Assistant starts"
+          "hvac_mode": "Default HVAC mode (thermostats only)",
+          "apply_on_start": "Apply immediately when Home Assistant starts",
+          "alarm_code": "Alarm code (only for alarm panels requiring a code)"
         }
       }
     }
@@ -19,8 +20,9 @@
         "title": "Schedule options",
         "data": {
           "target_entity": "Entity to control",
-          "hvac_mode": "HVAC mode to set (thermostats only)",
-          "apply_on_start": "Apply immediately when Home Assistant starts"
+          "hvac_mode": "Default HVAC mode (thermostats only)",
+          "apply_on_start": "Apply immediately when Home Assistant starts",
+          "alarm_code": "Alarm code (only for alarm panels requiring a code)"
         }
       }
     }

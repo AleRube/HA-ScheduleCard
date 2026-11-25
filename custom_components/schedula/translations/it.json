@@ -3,12 +3,13 @@
     "step": {
       "user": {
         "title": "Nuova schedulazione",
-        "description": "Scegli l'entità da comandare (termostato, input_number, switch, luce, select…). Gli orari e le impostazioni si modificano poi dalla card.",
+        "description": "Scegli l'entità da comandare: termostato, luce, switch, antintrusione, serratura, tapparella, input_number, select… Orari e impostazioni si modificano poi dalla card.",
         "data": {
           "name": "Nome",
           "target_entity": "Entità da comandare",
-          "hvac_mode": "Modalità HVAC da impostare (solo termostati)",
-          "apply_on_start": "Applica subito all'avvio di Home Assistant"
+          "hvac_mode": "Modalità HVAC predefinita (solo termostati)",
+          "apply_on_start": "Applica subito all'avvio di Home Assistant",
+          "alarm_code": "Codice allarme (solo antintrusione con codice)"
         }
       }
     }
@@ -19,8 +20,9 @@
         "title": "Opzioni schedulazione",
         "data": {
           "target_entity": "Entità da comandare",
-          "hvac_mode": "Modalità HVAC da impostare (solo termostati)",
-          "apply_on_start": "Applica subito all'avvio di Home Assistant"
+          "hvac_mode": "Modalità HVAC predefinita (solo termostati)",
+          "apply_on_start": "Applica subito all'avvio di Home Assistant",
+          "alarm_code": "Codice allarme (solo antintrusione con codice)"
         }
       }
     }
