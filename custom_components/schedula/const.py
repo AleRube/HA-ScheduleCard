@@ -1,7 +1,7 @@
 """Costanti per Schedula."""
 
 DOMAIN = "schedula"
-VERSION = "1.1.2"
+VERSION = "1.2.0"
 
 PLATFORMS = ["sensor", "switch"]
 
@@ -32,6 +32,8 @@ ONOFF_DOMAINS = {
     "humidifier",
     "script",
     "group",
+    "camera",
+    "valve",
 }
 
 TARGET_DOMAINS = sorted(NUMBER_DOMAINS | OPTION_DOMAINS | ONOFF_DOMAINS)

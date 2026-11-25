@@ -17,6 +17,7 @@ from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .profiles import build_profile
 from .const import (
     CONF_APPLY_ON_START,
     CONF_HVAC_MODE,
@@ -49,9 +50,13 @@ def _week(slots: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
     return {day: [dict(s) for s in slots] for day in DAYS}
 
 
-def build_default(hass: HomeAssistant, target: str) -> dict[str, Any]:
-    """Crea impostazioni e programma di default in base all'entità target."""
+def build_default(hass: HomeAssistant, target: str, info: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Crea impostazioni e programma di default in base al tipo di impianto e all'entità."""
     vtype = value_type(target)
+    profile = build_profile(hass, target, info or {})
+    if profile is not None:
+        presets, week = profile
+        return {"enabled": True, "value_type": vtype, "presets": presets, "week": week}
     domain = target.split(".", 1)[0]
     state = hass.states.get(target)
     attrs = state.attributes if state else {}
@@ -245,14 +250,14 @@ class ScheduleManager:
         vtype = value_type(self.target)
         if not stored or stored.get("value_type") != vtype:
             enabled = stored.get("enabled", True) if stored else True
-            stored = build_default(self.hass, self.target)
+            stored = build_default(self.hass, self.target, dict(self.entry.data))
             stored["enabled"] = enabled
             await self.store.async_save(stored)
         try:
             presets, week = normalize(stored.get("presets"), stored.get("week"))
         except HomeAssistantError as err:
             _LOGGER.warning("Dati salvati non validi (%s): ripristino i default", err)
-            stored = build_default(self.hass, self.target)
+            stored = build_default(self.hass, self.target, dict(self.entry.data))
             presets, week = stored["presets"], stored["week"]
         self.data = {
             "enabled": stored.get("enabled", True),
@@ -367,6 +372,9 @@ class ScheduleManager:
                 await self._call(domain, "set_value", {"entity_id": entity_id, "value": float(value)})
             elif domain == "cover":
                 await self._call(domain, "set_cover_position", {"entity_id": entity_id, "position": int(float(value))})
+            elif domain == "valve":
+                service = "open_valve" if str(value).lower() in ("on", "true", "1") else "close_valve"
+                await self._call(domain, service, {"entity_id": entity_id})
             elif domain in OPTION_DOMAINS:
                 await self._call(domain, "select_option", {"entity_id": entity_id, "option": str(value)})
             else:
@@ -409,6 +417,7 @@ class ScheduleManager:
             "enabled": self.enabled,
             "target_entity": self.target,
             "value_type": self.data.get("value_type"),
+            "category": self.entry.data.get("category", "altro"),
             "current_preset": preset["id"] if preset else None,
             "current_value": preset["value"] if preset else None,
             "next_change": when.isoformat() if when else None,

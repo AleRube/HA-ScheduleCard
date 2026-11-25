@@ -3,7 +3,7 @@
  * Interfaccia ispirata alle app dei cronotermostati: settimana a barre,
  * giorno con fasce orarie, editor intervallo e editor impostazioni.
  */
-const SCHEDULA_CARD_VERSION = '1.1.2';
+const SCHEDULA_CARD_VERSION = '1.2.0';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
@@ -13,11 +13,12 @@ const COLORS = [
   '#C792EA', '#F5F5F5', '#E53935', '#43A047', '#1E88E5', '#455A64',
 ];
 const ICONS = [
-  'mdi:home', 'mdi:fire', 'mdi:snowflake', 'mdi:leaf', 'mdi:weather-night', 'mdi:white-balance-sunny',
+  'mdi:home', 'mdi:fire', 'mdi:snowflake', 'mdi:snowflake-alert', 'mdi:leaf', 'mdi:weather-night',
+  'mdi:white-balance-sunny', 'mdi:radiator', 'mdi:air-conditioner', 'mdi:thermometer', 'mdi:water-boiler', 'mdi:water-boiler-off',
   'mdi:lightbulb-on', 'mdi:lightbulb-off', 'mdi:shield-lock', 'mdi:shield-off', 'mdi:shield-home', 'mdi:shield-moon',
-  'mdi:power', 'mdi:power-off', 'mdi:fan', 'mdi:water', 'mdi:window-shutter', 'mdi:window-shutter-open',
-  'mdi:lock', 'mdi:lock-open-variant', 'mdi:thermometer', 'mdi:briefcase', 'mdi:sofa', 'mdi:bed',
-  'mdi:airplane', 'mdi:clock-outline',
+  'mdi:cctv', 'mdi:cctv-off', 'mdi:window-shutter-open', 'mdi:window-shutter', 'mdi:sprinkler-variant', 'mdi:water-off',
+  'mdi:fan', 'mdi:fan-off', 'mdi:power', 'mdi:power-off', 'mdi:lock', 'mdi:lock-open-variant',
+  'mdi:water', 'mdi:briefcase', 'mdi:sofa', 'mdi:bed', 'mdi:airplane', 'mdi:clock-outline',
 ];
 const NUMBER_DOMAINS = ['climate', 'water_heater', 'input_number', 'number', 'cover'];
 const OPTION_DOMAINS = ['input_select', 'select'];
@@ -839,7 +840,7 @@ class SchedulaCard extends HTMLElement {
   _header({ title, sub, subOff, back, trash, menu, titleMenu }) {
     const many = titleMenu && this._schedules().length > 1;
     let html = `<div class="hdr">
-      ${back ? `<button class="icon-btn" data-action="back" aria-label="Indietro"><ha-icon icon="mdi:arrow-left"></ha-icon></button>` : `<div class="hdr-icon"><ha-icon icon="mdi:calendar-clock"></ha-icon></div>`}
+      ${back ? `<button class="icon-btn" data-action="back" aria-label="Indietro"><ha-icon icon="mdi:arrow-left"></ha-icon></button>` : `<div class="hdr-icon"><ha-icon icon="${esc(this._st()?.attributes?.icon || 'mdi:calendar-clock')}"></ha-icon></div>`}
       <div class="hdr-t ${many ? 'clickable' : ''}" ${many ? 'data-action="title-menu"' : ''}>
         <div class="title"><span style="overflow:hidden;text-overflow:ellipsis">${esc(title)}</span>${many ? '<ha-icon class="chev" icon="mdi:chevron-down"></ha-icon>' : ''}</div>
         ${sub ? `<div class="sub ${subOff ? 'off' : ''}">${sub}</div>` : ''}

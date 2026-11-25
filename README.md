@@ -6,15 +6,31 @@
 
 Programmatore settimanale **generico** per Home Assistant, con card in stile cronotermostato: riscaldamento, raffrescamento, luci, antintrusione (tramite switch/input_boolean), tapparelle… Scegli un'entità, crea delle **impostazioni** (es. Comfort 22°, Inserito, Acceso) e assegnale a **fasce orarie** per ogni giorno della settimana.
 
+## Tipi di impianto
+Quando aggiungi l'integrazione scegli il **tipo di impianto** e poi i dettagli. Schedula prepara le impostazioni (icone, colori e valori) e un **programma settimanale tipico**, che poi modifichi dalla card.
+
+| Tipo | Dettagli | Impostazioni preparate |
+|---|---|---|
+| **HVAC** | Riscaldamento / Raffrescamento / Caldo e freddo · Radiatori, Pavimento, Soffitto radiante, Fan coil, Split · Abitazione, Ufficio, Negozio | Comfort, Comfort +, Economico, Notte (o Spento per split e fan coil in raffrescamento). Temperature e anticipo di accensione adatti ai terminali: per esempio 2 ore per il pavimento, 1 ora per i radiatori |
+| **Luci** | Interne, Esterne, Giardino, Vetrine · utilizzo | Accese (lampadina accesa, giallo) e Spente (lampadina spenta, grigio) |
+| **TVCC** | Interne, Esterne · utilizzo | Registrazione attiva e Non attiva |
+| **Antintrusione** | Totale, Perimetrale, Solo notte · utilizzo | Inserito e Disinserito, tramite switch o input_boolean |
+| **Tapparelle** | utilizzo | Aperte, A metà, Chiuse |
+| **Irrigazione** | Prato, Orto, Goccia | Irrigazione e Ferma |
+| **Ventilazione / VMC** | utilizzo | Attiva e Spenta |
+| **Acqua calda sanitaria** | utilizzo | Comfort 50° ed Economico 40° (oppure Acceso/Spento) |
+| **Altro** | — | Impostazioni generiche in base all'entità |
+
 ## Entità supportate
 | Dominio | Cosa imposta l'impostazione |
 |---|---|
-| `climate` | temperatura + modalità per impostazione (Caldo, Freddo, Auto, Spento…) |
+| `climate` | temperatura e modalità per ogni impostazione (Caldo, Freddo, Auto, Spento…) |
 | `water_heater` | temperatura (oppure *Spento*) |
 | `input_number`, `number` | valore numerico |
 | `cover` | posizione 0–100 % |
 | `input_select`, `select` | opzione |
-| `switch`, `light`, `fan`, `input_boolean`, `automation`, `siren`, `humidifier`, `script`, `group` | acceso / spento |
+| `valve` | aperta / chiusa |
+| `switch`, `light`, `fan`, `input_boolean`, `camera`, `automation`, `siren`, `humidifier`, `script`, `group` | acceso / spento |
 
 ## Installazione con HACS (consigliata)
 [![Apri in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=AleRube&repository=HA-ScheduleCard&category=integration)
@@ -29,7 +45,7 @@ Programmatore settimanale **generico** per Home Assistant, con card in stile cro
 2. Riavvia Home Assistant.
 
 ## Configurazione
-1. **Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Schedula**. Scegli nome ed entità da comandare. Puoi creare più schedulazioni.
+1. **Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Schedula**. Scegli il tipo di impianto, poi i dettagli, il nome e l'entità da comandare. Puoi creare più schedulazioni, per esempio una per zona.
 2. In una dashboard aggiungi una card manuale:
 
 ```yaml

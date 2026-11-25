@@ -3,12 +3,21 @@
     "step": {
       "user": {
         "title": "Nuova schedulazione",
-        "description": "Scegli l'entità da comandare: termostato, luce, switch, input_boolean, tapparella, input_number, select… Orari e impostazioni si modificano poi dalla card.",
+        "description": "Che tipo di impianto vuoi programmare? In base alla scelta vengono preparate impostazioni, icone, colori e un programma settimanale tipico, che puoi poi modificare dalla card.",
+        "data": {
+          "category": "Tipo di impianto"
+        }
+      },
+      "details": {
+        "title": "Dettagli",
+        "description": "Definisci meglio l'impianto e scegli l'entità da comandare.",
         "data": {
           "name": "Nome",
-          "target_entity": "Entità da comandare",
-          "hvac_mode": "Modalità HVAC predefinita (solo termostati)",
-          "apply_on_start": "Applica subito all'avvio di Home Assistant"
+          "season": "Funzionamento",
+          "terminal": "Terminali",
+          "subtype": "Tipo",
+          "usage": "Utilizzo",
+          "target_entity": "Entità da comandare"
         }
       }
     }
@@ -26,6 +35,42 @@
     }
   },
   "selector": {
+    "category": {
+      "options": {
+        "hvac": "HVAC – Riscaldamento / Raffrescamento",
+        "luci": "Luci",
+        "tvcc": "TVCC – Videosorveglianza",
+        "antintrusione": "Antintrusione",
+        "tapparelle": "Tapparelle / Oscuranti",
+        "irrigazione": "Irrigazione",
+        "ventilazione": "Ventilazione / VMC",
+        "acs": "Acqua calda sanitaria",
+        "altro": "Altro (generico)"
+      }
+    },
+    "season": {
+      "options": {
+        "riscaldamento": "Riscaldamento",
+        "raffrescamento": "Raffrescamento",
+        "caldo_freddo": "Caldo e freddo (cambio stagione manuale)"
+      }
+    },
+    "terminal": {
+      "options": {
+        "radiatori": "Radiatori",
+        "pavimento": "Pannelli radianti a pavimento",
+        "soffitto": "Pannelli radianti a soffitto",
+        "fancoil": "Fan coil / Ventilconvettori",
+        "split": "Split / Pompa di calore aria-aria"
+      }
+    },
+    "usage": {
+      "options": {
+        "abitazione": "Abitazione",
+        "ufficio": "Ufficio",
+        "negozio": "Negozio / Attività"
+      }
+    },
     "hvac_mode": {
       "options": {
         "none": "Non modificare",
@@ -33,6 +78,34 @@
         "cool": "Raffrescamento",
         "heat_cool": "Caldo/Freddo",
         "auto": "Automatico"
+      }
+    },
+    "subtype_luci": {
+      "options": {
+        "interne": "Interne",
+        "esterne": "Esterne",
+        "giardino": "Giardino",
+        "vetrine": "Vetrine / Insegne"
+      }
+    },
+    "subtype_tvcc": {
+      "options": {
+        "interne": "Telecamere interne (attive quando non c'è nessuno)",
+        "esterne": "Telecamere esterne (attive di notte e in assenza)"
+      }
+    },
+    "subtype_antintrusione": {
+      "options": {
+        "totale": "Totale (inserito in assenza)",
+        "perimetrale": "Perimetrale (in assenza e di notte)",
+        "notte": "Solo notte"
+      }
+    },
+    "subtype_irrigazione": {
+      "options": {
+        "prato": "Prato (giorni alterni, all'alba)",
+        "orto": "Orto (mattina e sera)",
+        "goccia": "Goccia / Vasi (ogni mattina)"
       }
     }
   },

@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
+from .profiles import CATEGORY_ICONS
 from .entity import SchedulaEntity
 
 
@@ -21,7 +22,6 @@ async def async_setup_entry(
 
 class SchedulaSensor(SchedulaEntity, SensorEntity):
     _attr_name = None
-    _attr_icon = "mdi:calendar-clock"
     _unrecorded_attributes = frozenset(
         {
             "schedule_id",
@@ -37,6 +37,7 @@ class SchedulaSensor(SchedulaEntity, SensorEntity):
 
     def __init__(self, manager) -> None:
         super().__init__(manager, "schedule")
+        self._attr_icon = CATEGORY_ICONS.get(manager.entry.data.get("category", "altro"), "mdi:calendar-clock")
 
     @property
     def native_value(self) -> str | None:

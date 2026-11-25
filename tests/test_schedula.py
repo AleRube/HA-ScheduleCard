@@ -35,13 +35,14 @@ def no_frontend(hass: HomeAssistant):
         yield
 
 
-async def _create(hass: HomeAssistant, target="climate.ufficio"):
+async def _create(hass: HomeAssistant, target="climate.ufficio", category="altro", name="Ufficio", **details):
     hass.states.async_set(target, "heat", {"friendly_name": "Cucina", "min_temp": 7, "max_temp": 30, "temperature": 20})
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
-    assert result["type"] is FlowResultType.FORM
+    assert result["type"] is FlowResultType.FORM and result["step_id"] == "user"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"category": category})
+    assert result["type"] is FlowResultType.FORM and result["step_id"] == "details"
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"name": "Ufficio", "target_entity": target, "hvac_mode": "heat", "apply_on_start": True},
+        result["flow_id"], {"name": name, "target_entity": target, **details}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
@@ -66,7 +67,6 @@ async def test_setup_and_apply(hass: HomeAssistant, freezer: FrozenDateTimeFacto
     assert sensor.attributes["schedule_id"] == entry.entry_id
     assert sensor.state == "Comfort +"  # default: 06:30 comfort_plus
     assert calls and calls[-1].data["temperature"] == 22.0
-    assert calls[-1].data["hvac_mode"] == "heat"
 
     # salva un programma nuovo: lunedì 00:00 notte, 07:05 eco
     presets = sensor.attributes["presets"]
@@ -183,3 +183,34 @@ async def test_hvac_mode_per_preset(hass: HomeAssistant, freezer: FrozenDateTime
     await hass.services.async_call(DOMAIN, "save", {"schedule_id": entry.entry_id, "presets": presets, "week": week}, blocking=True)
     assert off and off[-1].data["entity_id"] == "climate.sala"
     assert sensor is not None
+
+
+async def test_profilo_hvac_radiatori(hass: HomeAssistant):
+    """HVAC riscaldamento a radiatori in abitazione: impostazioni e programma tipici."""
+    await _create(hass, target="climate.soggiorno", category="hvac", name="Riscaldamento",
+                  season="riscaldamento", terminal="radiatori", usage="abitazione")
+    attrs = hass.states.get("sensor.riscaldamento").attributes
+    assert attrs["icon"] == "mdi:thermostat"
+    presets = {p["id"]: p for p in attrs["presets"]}
+    assert presets["comfort"]["value"] == 20.0 and presets["comfort"]["hvac_mode"] == "heat"
+    assert presets["notte"]["value"] == 16.0
+    assert attrs["week"]["mon"] == [
+        {"start": "00:00", "preset": "notte"},
+        {"start": "05:30", "preset": "comfort_plus"},
+        {"start": "06:30", "preset": "comfort"},
+        {"start": "08:30", "preset": "eco"},
+        {"start": "16:30", "preset": "comfort_plus"},
+        {"start": "17:30", "preset": "comfort"},
+        {"start": "22:30", "preset": "notte"},
+    ]
+
+
+async def test_profilo_luci(hass: HomeAssistant):
+    """Luci esterne: icone lampadina, giallo/grigio."""
+    hass.states.async_set("light.giardino", "off", {"friendly_name": "Giardino"})
+    await _create(hass, target="light.giardino", category="luci", name="Luci esterne", subtype="esterne", usage="abitazione")
+    attrs = hass.states.get("sensor.luci_esterne").attributes
+    on, off = attrs["presets"]
+    assert (on["icon"], on["color"], on["value"]) == ("mdi:lightbulb-on", "#FFD166", "on")
+    assert (off["icon"], off["color"], off["value"]) == ("mdi:lightbulb-off", "#455A64", "off")
+    assert [s["start"] for s in attrs["week"]["sat"]] == ["00:00", "05:30", "07:30", "17:30"]

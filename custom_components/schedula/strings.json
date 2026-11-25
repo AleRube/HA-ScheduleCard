@@ -3,12 +3,21 @@
     "step": {
       "user": {
         "title": "New schedule",
-        "description": "Choose the entity to control: thermostat, light, switch, input_boolean, cover, input_number, select… Times and presets are edited from the card.",
+        "description": "What kind of system do you want to schedule? Presets, icons, colours and a typical weekly program are prepared accordingly; you can edit them from the card.",
+        "data": {
+          "category": "System type"
+        }
+      },
+      "details": {
+        "title": "Details",
+        "description": "Describe the system and choose the entity to control.",
         "data": {
           "name": "Name",
-          "target_entity": "Entity to control",
-          "hvac_mode": "Default HVAC mode (thermostats only)",
-          "apply_on_start": "Apply immediately when Home Assistant starts"
+          "season": "Operation",
+          "terminal": "Emitters",
+          "subtype": "Type",
+          "usage": "Use",
+          "target_entity": "Entity to control"
         }
       }
     }
@@ -26,6 +35,42 @@
     }
   },
   "selector": {
+    "category": {
+      "options": {
+        "hvac": "HVAC – Heating / Cooling",
+        "luci": "Lights",
+        "tvcc": "CCTV",
+        "antintrusione": "Intrusion alarm",
+        "tapparelle": "Shutters / Blinds",
+        "irrigazione": "Irrigation",
+        "ventilazione": "Ventilation / MVHR",
+        "acs": "Domestic hot water",
+        "altro": "Other (generic)"
+      }
+    },
+    "season": {
+      "options": {
+        "riscaldamento": "Heating",
+        "raffrescamento": "Cooling",
+        "caldo_freddo": "Heating and cooling (manual season change)"
+      }
+    },
+    "terminal": {
+      "options": {
+        "radiatori": "Radiators",
+        "pavimento": "Underfloor radiant panels",
+        "soffitto": "Ceiling radiant panels",
+        "fancoil": "Fan coils",
+        "split": "Split / Air-to-air heat pump"
+      }
+    },
+    "usage": {
+      "options": {
+        "abitazione": "Home",
+        "ufficio": "Office",
+        "negozio": "Shop / Business"
+      }
+    },
     "hvac_mode": {
       "options": {
         "none": "Don't change",
@@ -33,6 +78,34 @@
         "cool": "Cool",
         "heat_cool": "Heat/Cool",
         "auto": "Auto"
+      }
+    },
+    "subtype_luci": {
+      "options": {
+        "interne": "Indoor",
+        "esterne": "Outdoor",
+        "giardino": "Garden",
+        "vetrine": "Shop windows / Signs"
+      }
+    },
+    "subtype_tvcc": {
+      "options": {
+        "interne": "Indoor cameras (active when nobody is in)",
+        "esterne": "Outdoor cameras (active at night and when away)"
+      }
+    },
+    "subtype_antintrusione": {
+      "options": {
+        "totale": "Full (armed when away)",
+        "perimetrale": "Perimeter (away and at night)",
+        "notte": "Night only"
+      }
+    },
+    "subtype_irrigazione": {
+      "options": {
+        "prato": "Lawn (every other day, at dawn)",
+        "orto": "Vegetable garden (morning and evening)",
+        "goccia": "Drip / Pots (every morning)"
       }
     }
   },
