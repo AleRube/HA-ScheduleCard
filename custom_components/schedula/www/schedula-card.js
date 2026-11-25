@@ -3,7 +3,7 @@
  * Interfaccia ispirata alle app dei cronotermostati: settimana a barre,
  * giorno con fasce orarie, editor intervallo e editor impostazioni.
  */
-const SCHEDULA_CARD_VERSION = '1.1.0';
+const SCHEDULA_CARD_VERSION = '1.1.1';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_SHORT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];

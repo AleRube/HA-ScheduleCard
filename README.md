@@ -1,3 +1,5 @@
+<p align="center"><img src="images/logo.png" alt="Schedula" height="110"></p>
+
 # Schedula – Programmatore settimanale per Home Assistant
 
 ![Anteprima](images/anteprima.png)
@@ -66,7 +68,7 @@ All'inizio di ogni fascia viene applicato il valore. Se nel frattempo cambi il t
 - `schedula.set_enabled`: `schedule_id`, `enabled`.
 - `schedula.apply_now`: `schedule_id`.
 
-Richiede Home Assistant 2024.11 o successivo.
+Richiede Home Assistant 2024.11 o successivo. L'icona dell'integrazione compare da Home Assistant 2026.3 in poi (cartella `brand/`).
 
 ## Sviluppo
 ```bash
