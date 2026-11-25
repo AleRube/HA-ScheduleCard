@@ -152,8 +152,8 @@ async def test_card_served(hass, hass_client):
     hass.config.components.remove("http")
     assert await async_setup_component(hass, "http", {})
     with patch("homeassistant.components.frontend.add_extra_js_url") as add:
-        client = await hass_client()
         await real(hass)
+    client = await hass_client()
     resp = await client.get("/schedula_static/schedula-card.js")
     assert resp.status == 200
     assert "schedula-card" in await resp.text()
