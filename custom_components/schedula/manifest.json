@@ -1,0 +1,18 @@
+{
+  "domain": "schedula",
+  "name": "Schedula - Programmatore settimanale",
+  "codeowners": [
+    "@AleRube"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http",
+    "frontend"
+  ],
+  "documentation": "https://github.com/AleRube/HA-ScheduleCard",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/AleRube/HA-ScheduleCard/issues",
+  "requirements": [],
+  "version": "1.0.1"
+}

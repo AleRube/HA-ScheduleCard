@@ -1,0 +1,90 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "New schedule",
+        "description": "Choose the entity to control (thermostat, input_number, switch, light, select…). Times and presets are edited from the card.",
+        "data": {
+          "name": "Name",
+          "target_entity": "Entity to control",
+          "hvac_mode": "HVAC mode to set (thermostats only)",
+          "apply_on_start": "Apply immediately when Home Assistant starts"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Schedule options",
+        "data": {
+          "target_entity": "Entity to control",
+          "hvac_mode": "HVAC mode to set (thermostats only)",
+          "apply_on_start": "Apply immediately when Home Assistant starts"
+        }
+      }
+    }
+  },
+  "selector": {
+    "hvac_mode": {
+      "options": {
+        "none": "Don't change",
+        "heat": "Heat",
+        "cool": "Cool",
+        "heat_cool": "Heat/Cool",
+        "auto": "Auto"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "enabled": {
+        "name": "Active"
+      }
+    }
+  },
+  "services": {
+    "save": {
+      "name": "Save program",
+      "description": "Save presets and weekly program (used by the card).",
+      "fields": {
+        "schedule_id": {
+          "name": "Schedule ID",
+          "description": "schedule_id attribute of the sensor."
+        },
+        "presets": {
+          "name": "Presets",
+          "description": "List of presets (id, name, icon, color, value)."
+        },
+        "week": {
+          "name": "Week",
+          "description": "Object with keys mon..sun and lists of (start, preset)."
+        }
+      }
+    },
+    "set_enabled": {
+      "name": "Enable/disable",
+      "description": "Enable or disable the schedule.",
+      "fields": {
+        "schedule_id": {
+          "name": "Schedule ID",
+          "description": "schedule_id attribute of the sensor."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "true to enable."
+        }
+      }
+    },
+    "apply_now": {
+      "name": "Apply now",
+      "description": "Re-apply the current time slot immediately.",
+      "fields": {
+        "schedule_id": {
+          "name": "Schedule ID",
+          "description": "schedule_id attribute of the sensor."
+        }
+      }
+    }
+  }
+}

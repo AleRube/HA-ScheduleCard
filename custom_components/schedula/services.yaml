@@ -1,0 +1,30 @@
+save:
+  fields:
+    schedule_id:
+      required: true
+      selector:
+        text:
+    presets:
+      required: true
+      selector:
+        object:
+    week:
+      required: true
+      selector:
+        object:
+set_enabled:
+  fields:
+    schedule_id:
+      required: true
+      selector:
+        text:
+    enabled:
+      required: true
+      selector:
+        boolean:
+apply_now:
+  fields:
+    schedule_id:
+      required: true
+      selector:
+        text:

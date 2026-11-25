@@ -1,0 +1,90 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nuova schedulazione",
+        "description": "Scegli l'entità da comandare (termostato, input_number, switch, luce, select…). Gli orari e le impostazioni si modificano poi dalla card.",
+        "data": {
+          "name": "Nome",
+          "target_entity": "Entità da comandare",
+          "hvac_mode": "Modalità HVAC da impostare (solo termostati)",
+          "apply_on_start": "Applica subito all'avvio di Home Assistant"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni schedulazione",
+        "data": {
+          "target_entity": "Entità da comandare",
+          "hvac_mode": "Modalità HVAC da impostare (solo termostati)",
+          "apply_on_start": "Applica subito all'avvio di Home Assistant"
+        }
+      }
+    }
+  },
+  "selector": {
+    "hvac_mode": {
+      "options": {
+        "none": "Non modificare",
+        "heat": "Riscaldamento",
+        "cool": "Raffrescamento",
+        "heat_cool": "Caldo/Freddo",
+        "auto": "Automatico"
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "enabled": {
+        "name": "Attiva"
+      }
+    }
+  },
+  "services": {
+    "save": {
+      "name": "Salva programma",
+      "description": "Salva impostazioni e programma settimanale (usato dalla card).",
+      "fields": {
+        "schedule_id": {
+          "name": "ID schedulazione",
+          "description": "Attributo schedule_id del sensore."
+        },
+        "presets": {
+          "name": "Impostazioni",
+          "description": "Lista di impostazioni (id, name, icon, color, value)."
+        },
+        "week": {
+          "name": "Settimana",
+          "description": "Oggetto con chiavi mon..sun e liste di (start, preset)."
+        }
+      }
+    },
+    "set_enabled": {
+      "name": "Attiva/disattiva",
+      "description": "Attiva o disattiva la schedulazione.",
+      "fields": {
+        "schedule_id": {
+          "name": "ID schedulazione",
+          "description": "Attributo schedule_id del sensore."
+        },
+        "enabled": {
+          "name": "Attiva",
+          "description": "true per attivare."
+        }
+      }
+    },
+    "apply_now": {
+      "name": "Applica ora",
+      "description": "Riapplica subito l'impostazione dell'orario corrente.",
+      "fields": {
+        "schedule_id": {
+          "name": "ID schedulazione",
+          "description": "Attributo schedule_id del sensore."
+        }
+      }
+    }
+  }
+}
