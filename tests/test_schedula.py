@@ -142,3 +142,19 @@ def test_normalize_carry_over():
     # lunedì parte con l'ultima di domenica (b), duplicati uniti
     assert out["mon"] == [{"start": "00:00", "preset": "b"}, {"start": "08:00", "preset": "a"}]
     assert out["tue"] == [{"start": "00:00", "preset": "a"}]
+
+
+async def test_card_served(hass, hass_client):
+    """La card JS viene servita e registrata nel frontend."""
+    import importlib
+    import custom_components.schedula as sch
+    real = importlib.reload(sch)._register_card  # versione non patchata
+    hass.config.components.remove("http")
+    assert await async_setup_component(hass, "http", {})
+    with patch("homeassistant.components.frontend.add_extra_js_url") as add:
+        client = await hass_client()
+        await real(hass)
+    resp = await client.get("/schedula_static/schedula-card.js")
+    assert resp.status == 200
+    assert "schedula-card" in await resp.text()
+    assert add.call_args[0][1].startswith("/schedula_static/schedula-card.js?v=")
